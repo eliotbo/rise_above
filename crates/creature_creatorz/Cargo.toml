@@ -1,0 +1,23 @@
+[package]
+name = "balls2d"
+version = "0.1.0"
+edition = "2021"
+authors = ["Eliot Bolduc"]
+description = "An instanced material for 2d characters made of circles"
+license = "MIT OR Apache-2.0"
+readme = "README.md"
+categories = [
+    "game-engines", "game-development"
+]
+
+[dependencies]
+bevy = { version = "0.6.1", default-features = true, features = [  "render", "x11", "filesystem_watcher"] }
+bytemuck = "1.7"
+rand = "0.3.0"
+bevy-inspector-egui = "0.8"
+
+serde_json = "1.0.59"
+serde = { version = "1", features = ["derive"] }
+rfd = "0.5.1"
+
+

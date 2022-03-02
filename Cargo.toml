@@ -1,0 +1,23 @@
+[package]
+name = "rise_above"
+version = "0.1.0"
+edition = "2021"
+authors = ["Eliot Bolduc"]
+description = "A game about rising to the surface starting as an ameoba."
+license = "GNU GPLv3"
+readme = "README.md"
+categories = [
+    "game-development"
+]
+
+[dependencies]
+bevy = { version = "0.6.1", default-features = true, features = [  "render", "x11", "filesystem_watcher"] }
+bytemuck = "1.7"
+rand = "0.3.0"
+bevy-inspector-egui = "0.8"
+
+serde_json = "1.0.59"
+serde = { version = "1", features = ["derive"] }
+rfd = "0.5.1"
+
+

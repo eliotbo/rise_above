@@ -1,0 +1,544 @@
+{
+  "group_position": [
+    0,
+    0,
+    0
+  ],
+  "scale": 4294967295,
+  "color": [
+    858993472,
+    1288490240,
+    2576980480,
+    4294967295
+  ],
+  "data": [
+    {
+      "pos": [
+        0.045562744,
+        -0.25958252
+      ],
+      "max_size": 0.9453125,
+      "frequency": 0.625,
+      "noise": 0.0,
+      "min_size": 0.8984375,
+      "morph": 0.5,
+      "hole_size": 0.25
+    },
+    {
+      "pos": [
+        -0.20388794,
+        -0.35992432
+      ],
+      "max_size": 0.9453125,
+      "frequency": 0.625,
+      "noise": 0.0,
+      "min_size": 0.8984375,
+      "morph": 0.5,
+      "hole_size": 0.25
+    },
+    {
+      "pos": [
+        0.1928711,
+        -0.1385498
+      ],
+      "max_size": 0.9453125,
+      "frequency": 0.625,
+      "noise": 0.0,
+      "min_size": 0.8984375,
+      "morph": 0.5,
+      "hole_size": 0.25
+    },
+    {
+      "pos": [
+        0.11151123,
+        0.21179199
+      ],
+      "max_size": 0.9453125,
+      "frequency": 0.625,
+      "noise": 0.0,
+      "min_size": 0.8984375,
+      "morph": 0.5,
+      "hole_size": 0.25
+    },
+    {
+      "pos": [
+        0.1260376,
+        -0.19836426
+      ],
+      "max_size": 0.9453125,
+      "frequency": 0.625,
+      "noise": 0.0,
+      "min_size": 0.8984375,
+      "morph": 0.5,
+      "hole_size": 0.25
+    },
+    {
+      "pos": [
+        -0.039916992,
+        -0.28390503
+      ],
+      "max_size": 0.9453125,
+      "frequency": 0.625,
+      "noise": 0.0,
+      "min_size": 0.8984375,
+      "morph": 0.5,
+      "hole_size": 0.25
+    },
+    {
+      "pos": [
+        -0.108306885,
+        -0.32836914
+      ],
+      "max_size": 0.9453125,
+      "frequency": 0.625,
+      "noise": 0.0,
+      "min_size": 0.8984375,
+      "morph": 0.5,
+      "hole_size": 0.25
+    },
+    {
+      "pos": [
+        -0.18804932,
+        0.30334473
+      ],
+      "max_size": 0.9453125,
+      "frequency": 0.625,
+      "noise": 0.0,
+      "min_size": 0.8984375,
+      "morph": 0.5,
+      "hole_size": 0.25
+    },
+    {
+      "pos": [
+        -0.34625244,
+        -0.22772217
+      ],
+      "max_size": 0.9453125,
+      "frequency": 0.625,
+      "noise": 0.0,
+      "min_size": 0.8984375,
+      "morph": 0.5,
+      "hole_size": 0.25
+    },
+    {
+      "pos": [
+        -0.2807312,
+        -0.276886
+      ],
+      "max_size": 0.9453125,
+      "frequency": 0.625,
+      "noise": 0.0,
+      "min_size": 0.8984375,
+      "morph": 0.5,
+      "hole_size": 0.25
+    },
+    {
+      "pos": [
+        1.4999695,
+        1.4999695
+      ],
+      "max_size": 0.9453125,
+      "frequency": 0.625,
+      "noise": 0.0,
+      "min_size": 0.8984375,
+      "morph": 0.5,
+      "hole_size": 0.25
+    },
+    {
+      "pos": [
+        1.4999695,
+        1.4999695
+      ],
+      "max_size": 0.9453125,
+      "frequency": 0.625,
+      "noise": 0.0,
+      "min_size": 0.8984375,
+      "morph": 0.5,
+      "hole_size": 0.25
+    },
+    {
+      "pos": [
+        1.4999695,
+        1.4999695
+      ],
+      "max_size": 0.9453125,
+      "frequency": 0.625,
+      "noise": 0.0,
+      "min_size": 0.8984375,
+      "morph": 0.5,
+      "hole_size": 0.25
+    },
+    {
+      "pos": [
+        1.4999695,
+        1.4999695
+      ],
+      "max_size": 0.9453125,
+      "frequency": 0.625,
+      "noise": 0.0,
+      "min_size": 0.8984375,
+      "morph": 0.5,
+      "hole_size": 0.25
+    },
+    {
+      "pos": [
+        1.4999695,
+        1.4999695
+      ],
+      "max_size": 0.9453125,
+      "frequency": 0.625,
+      "noise": 0.0,
+      "min_size": 0.8984375,
+      "morph": 0.5,
+      "hole_size": 0.25
+    },
+    {
+      "pos": [
+        1.4999695,
+        1.4999695
+      ],
+      "max_size": 0.9453125,
+      "frequency": 0.625,
+      "noise": 0.0,
+      "min_size": 0.8984375,
+      "morph": 0.5,
+      "hole_size": 0.25
+    },
+    {
+      "pos": [
+        1.4999695,
+        1.4999695
+      ],
+      "max_size": 0.9453125,
+      "frequency": 0.625,
+      "noise": 0.0,
+      "min_size": 0.8984375,
+      "morph": 0.5,
+      "hole_size": 0.25
+    },
+    {
+      "pos": [
+        1.4999695,
+        1.4999695
+      ],
+      "max_size": 0.9453125,
+      "frequency": 0.625,
+      "noise": 0.0,
+      "min_size": 0.8984375,
+      "morph": 0.5,
+      "hole_size": 0.25
+    },
+    {
+      "pos": [
+        1.4999695,
+        1.4999695
+      ],
+      "max_size": 0.9453125,
+      "frequency": 0.625,
+      "noise": 0.0,
+      "min_size": 0.8984375,
+      "morph": 0.5,
+      "hole_size": 0.25
+    },
+    {
+      "pos": [
+        1.4999695,
+        1.4999695
+      ],
+      "max_size": 0.9453125,
+      "frequency": 0.625,
+      "noise": 0.0,
+      "min_size": 0.8984375,
+      "morph": 0.5,
+      "hole_size": 0.25
+    },
+    {
+      "pos": [
+        1.4999695,
+        1.4999695
+      ],
+      "max_size": 0.9453125,
+      "frequency": 0.625,
+      "noise": 0.0,
+      "min_size": 0.8984375,
+      "morph": 0.5,
+      "hole_size": 0.25
+    },
+    {
+      "pos": [
+        1.4999695,
+        1.4999695
+      ],
+      "max_size": 0.9453125,
+      "frequency": 0.625,
+      "noise": 0.0,
+      "min_size": 0.8984375,
+      "morph": 0.5,
+      "hole_size": 0.25
+    },
+    {
+      "pos": [
+        1.4999695,
+        1.4999695
+      ],
+      "max_size": 0.9453125,
+      "frequency": 0.625,
+      "noise": 0.0,
+      "min_size": 0.8984375,
+      "morph": 0.5,
+      "hole_size": 0.25
+    },
+    {
+      "pos": [
+        1.4999695,
+        1.4999695
+      ],
+      "max_size": 0.9453125,
+      "frequency": 0.625,
+      "noise": 0.0,
+      "min_size": 0.8984375,
+      "morph": 0.5,
+      "hole_size": 0.25
+    },
+    {
+      "pos": [
+        1.4999695,
+        1.4999695
+      ],
+      "max_size": 0.9453125,
+      "frequency": 0.625,
+      "noise": 0.0,
+      "min_size": 0.8984375,
+      "morph": 0.5,
+      "hole_size": 0.25
+    },
+    {
+      "pos": [
+        1.4999695,
+        1.4999695
+      ],
+      "max_size": 0.9453125,
+      "frequency": 0.625,
+      "noise": 0.0,
+      "min_size": 0.8984375,
+      "morph": 0.5,
+      "hole_size": 0.25
+    },
+    {
+      "pos": [
+        1.4999695,
+        1.4999695
+      ],
+      "max_size": 0.9453125,
+      "frequency": 0.625,
+      "noise": 0.0,
+      "min_size": 0.8984375,
+      "morph": 0.5,
+      "hole_size": 0.25
+    },
+    {
+      "pos": [
+        1.4999695,
+        1.4999695
+      ],
+      "max_size": 0.9453125,
+      "frequency": 0.625,
+      "noise": 0.0,
+      "min_size": 0.8984375,
+      "morph": 0.5,
+      "hole_size": 0.25
+    },
+    {
+      "pos": [
+        1.4999695,
+        1.4999695
+      ],
+      "max_size": 0.9453125,
+      "frequency": 0.625,
+      "noise": 0.0,
+      "min_size": 0.8984375,
+      "morph": 0.5,
+      "hole_size": 0.25
+    },
+    {
+      "pos": [
+        1.4999695,
+        1.4999695
+      ],
+      "max_size": 0.9453125,
+      "frequency": 0.625,
+      "noise": 0.0,
+      "min_size": 0.8984375,
+      "morph": 0.5,
+      "hole_size": 0.25
+    },
+    {
+      "pos": [
+        1.4999695,
+        1.4999695
+      ],
+      "max_size": 0.9453125,
+      "frequency": 0.625,
+      "noise": 0.0,
+      "min_size": 0.8984375,
+      "morph": 0.5,
+      "hole_size": 0.25
+    },
+    {
+      "pos": [
+        1.4999695,
+        1.4999695
+      ],
+      "max_size": 0.9453125,
+      "frequency": 0.625,
+      "noise": 0.0,
+      "min_size": 0.8984375,
+      "morph": 0.5,
+      "hole_size": 0.25
+    },
+    {
+      "pos": [
+        1.4999695,
+        1.4999695
+      ],
+      "max_size": 0.9453125,
+      "frequency": 0.625,
+      "noise": 0.0,
+      "min_size": 0.8984375,
+      "morph": 0.5,
+      "hole_size": 0.25
+    },
+    {
+      "pos": [
+        1.4999695,
+        1.4999695
+      ],
+      "max_size": 0.9453125,
+      "frequency": 0.625,
+      "noise": 0.0,
+      "min_size": 0.8984375,
+      "morph": 0.5,
+      "hole_size": 0.25
+    },
+    {
+      "pos": [
+        1.4999695,
+        1.4999695
+      ],
+      "max_size": 0.9453125,
+      "frequency": 0.625,
+      "noise": 0.0,
+      "min_size": 0.8984375,
+      "morph": 0.5,
+      "hole_size": 0.25
+    },
+    {
+      "pos": [
+        1.4999695,
+        1.4999695
+      ],
+      "max_size": 0.9453125,
+      "frequency": 0.625,
+      "noise": 0.0,
+      "min_size": 0.8984375,
+      "morph": 0.5,
+      "hole_size": 0.25
+    },
+    {
+      "pos": [
+        1.4999695,
+        1.4999695
+      ],
+      "max_size": 0.9453125,
+      "frequency": 0.625,
+      "noise": 0.0,
+      "min_size": 0.8984375,
+      "morph": 0.5,
+      "hole_size": 0.25
+    },
+    {
+      "pos": [
+        1.4999695,
+        1.4999695
+      ],
+      "max_size": 0.9453125,
+      "frequency": 0.625,
+      "noise": 0.0,
+      "min_size": 0.8984375,
+      "morph": 0.5,
+      "hole_size": 0.25
+    },
+    {
+      "pos": [
+        1.4999695,
+        1.4999695
+      ],
+      "max_size": 0.9453125,
+      "frequency": 0.625,
+      "noise": 0.0,
+      "min_size": 0.8984375,
+      "morph": 0.5,
+      "hole_size": 0.25
+    },
+    {
+      "pos": [
+        1.4999695,
+        1.4999695
+      ],
+      "max_size": 0.9453125,
+      "frequency": 0.625,
+      "noise": 0.0,
+      "min_size": 0.8984375,
+      "morph": 0.5,
+      "hole_size": 0.25
+    },
+    {
+      "pos": [
+        1.4999695,
+        1.4999695
+      ],
+      "max_size": 0.9453125,
+      "frequency": 0.625,
+      "noise": 0.0,
+      "min_size": 0.8984375,
+      "morph": 0.5,
+      "hole_size": 0.25
+    },
+    {
+      "pos": [
+        1.4999695,
+        1.4999695
+      ],
+      "max_size": 0.9453125,
+      "frequency": 0.625,
+      "noise": 0.0,
+      "min_size": 0.8984375,
+      "morph": 0.5,
+      "hole_size": 0.25
+    },
+    {
+      "pos": [
+        1.4999695,
+        1.4999695
+      ],
+      "max_size": 0.9453125,
+      "frequency": 0.625,
+      "noise": 0.0,
+      "min_size": 0.8984375,
+      "morph": 0.5,
+      "hole_size": 0.25
+    },
+    {
+      "pos": [
+        1.4999695,
+        1.4999695
+      ],
+      "max_size": 0.9453125,
+      "frequency": 0.625,
+      "noise": 0.0,
+      "min_size": 0.8984375,
+      "morph": 0.5,
+      "hole_size": 0.25
+    }
+  ]
+}

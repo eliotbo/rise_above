@@ -86,12 +86,15 @@ impl Game {
         let mut rng = rand::thread_rng();
         let mut agents = HashMap::new();
         (0..num_agents).for_each(|_| {
-            // let id: u32 = rng.gen();
+            //
             let random_stage = GameStage::iter().choose(&mut rng).unwrap();
             let id: u32 = rng.gen();
-            let random_agent = Agent::gen_random(&random_stage, id);
+            // avoid accidentally duplicating the main character's id
+            if id != 1 {
+                let random_agent = Agent::gen_random(&random_stage, id);
 
-            agents.insert(id, random_agent);
+                agents.insert(id, random_agent);
+            }
         });
         agents
     }
@@ -336,6 +339,11 @@ pub enum Direction {
     NorthWest,
 }
 
+#[derive(Component)]
+pub struct MainCharacter {
+    pub id: u32,
+}
+
 fn see(game: &mut Game) {
     let all_agents = game.agents.clone();
     let all_items = game.items.clone();
@@ -366,11 +374,11 @@ fn see(game: &mut Game) {
                 let agent_looking_direction =
                     Vec2::new(agent.look_at_angle.cos(), agent.look_at_angle.sin());
                 // if the angles differ by more than 180 degrees, then the other agent is on the other side of the agent
-                if agent_looking_direction.dot(direction_to_other_agent) > 0.0 {
-                    agent.update_agent_sight(game.time, dist, other_agent);
+                // if agent_looking_direction.dot(direction_to_other_agent) > 0.0 {
+                agent.update_agent_sight(game.time, dist, other_agent);
 
-                    // despawn and spawn green cube upon seeing
-                }
+                // despawn and spawn green cube upon seeing
+                // }
             }
         }
 
@@ -391,11 +399,11 @@ fn see(game: &mut Game) {
                 let agent_looking_direction =
                     Vec2::new(agent.look_at_angle.cos(), agent.look_at_angle.sin());
                 // if the angles differ by more than 180 degrees, then the other agent is on the other side of the agent
-                if agent_looking_direction.dot(direction_to_item) > 0.0 {
-                    agent.update_item_sight(game.time, dist, item);
+                // if agent_looking_direction.dot(direction_to_item) > 0.0 {
+                agent.update_item_sight(game.time, dist, item);
 
-                    // despawn and spawn green cube upon seeing
-                }
+                // despawn and spawn green cube upon seeing
+                // }
             }
         }
 
@@ -416,11 +424,11 @@ fn see(game: &mut Game) {
                 let agent_looking_direction =
                     Vec2::new(agent.look_at_angle.cos(), agent.look_at_angle.sin());
                 // if the angles differ by more than 180 degrees, then the other agent is on the other side of the agent
-                if agent_looking_direction.dot(direction_to_food) > 0.0 {
-                    agent.update_food_sight(game.time, dist, food);
+                // if agent_looking_direction.dot(direction_to_food) > 0.0 {
+                agent.update_food_sight(game.time, dist, food);
 
-                    // despawn and spawn green cube upon seeing
-                }
+                // despawn and spawn green cube upon seeing
+                // }
             }
         }
     }
@@ -543,11 +551,11 @@ pub fn collisions(game: &mut Game) {
 
     let mut collisions: Vec<AgentCollisionInfo> = Vec::new();
 
-    game.agents.iter().for_each(|(id, mut agent)| {
+    game.agents.iter().for_each(|(id, agent)| {
         // let agent_pos = agent_positions.get(id).unwrap();
 
         let mut agent_pair_checked = Vec::new();
-        let agents_in_sight = agent
+        agent
             .sensors
             .agent_sight
             .iter()
@@ -581,7 +589,7 @@ pub fn collisions(game: &mut Game) {
                                     // let u1 = agent.position - agent.last_position;
                                     // let u2 = other_agent.position - other_agent.last_position;
 
-                                    let u1 = agent.compute_self_velocity();
+                                    let u1 = agent.velocity;
                                     let u2 = Vec2::new(
                                         other_agent.look_at_angle.cos() * other_agent.speed,
                                         other_agent.look_at_angle.sin() * other_agent.speed,

@@ -1,4 +1,6 @@
-use crate::util::*;
+// use crate::util::*;
+use crate::*;
+
 // use crate::vec2::*;
 
 use bevy::prelude::*;
@@ -24,10 +26,14 @@ pub struct Agent {
     pub last_position: Vec2,
     pub speed: f32,
     pub look_at_angle: f32,
+    pub velocity: Vec2,
     pub target_position: Vec2,
 
     pub body: Vec<Body>,
     pub just_collided: bool, // compute the atom damped bounce animation
+
+    pub boost_time: f32,
+    pub boost: bool,
 
     pub turning: Turning,
     pub acc: Acceleration,
@@ -36,7 +42,7 @@ pub struct Agent {
     pub social: Social,
 
     pub hp: f32,
-    pub energy: f32,
+    pub energy_shots: f32,
     pub mass: f32,
     pub satiety: f32,
     pub power_usage: f32,
@@ -70,7 +76,7 @@ impl Agent {
                 position = Vec2::new(
                     rng.gen_range(BOTTOM_LIMIT_X_MIN..BOTTOM_LIMIT_X_MAX),
                     rng.gen_range(0.0..BOTTOM_STAGE_LIMIT),
-                );
+                ) * POS_MULT;
                 mass = rng.gen_range(0.0..BOTTOM_STAGE_LIMIT);
                 hp = rng.gen_range(0.0..BOTTOM_STAGE_LIMIT);
                 hearing_range = rng.gen_range(0.0..BOTTOM_STAGE_LIMIT);
@@ -81,7 +87,7 @@ impl Agent {
                 position = Vec2::new(
                     rng.gen_range(0.0..1.0),
                     rng.gen_range(BOTTOM_STAGE_LIMIT..MID_STAGE_LIMIT),
-                );
+                ) * POS_MULT;
                 mass = rng.gen_range(BOTTOM_STAGE_LIMIT..MID_STAGE_LIMIT);
                 hp = rng.gen_range(BOTTOM_STAGE_LIMIT..MID_STAGE_LIMIT);
                 hearing_range = rng.gen_range(BOTTOM_STAGE_LIMIT..MID_STAGE_LIMIT);
@@ -93,7 +99,7 @@ impl Agent {
                 position = Vec2::new(
                     rng.gen_range(0.0..TOP_STAGE_LIMIT),
                     rng.gen_range(MID_STAGE_LIMIT..TOP_STAGE_LIMIT),
-                );
+                ) * POS_MULT;
                 mass = rng.gen_range(MID_STAGE_LIMIT..TOP_STAGE_LIMIT);
                 hp = rng.gen_range(MID_STAGE_LIMIT..TOP_STAGE_LIMIT);
                 hearing_range = rng.gen_range(MID_STAGE_LIMIT..TOP_STAGE_LIMIT);
@@ -118,9 +124,14 @@ impl Agent {
             ..Default::default()
         };
 
+        let last_position = position;
+        println!("ps: {:?}", position);
+        println!("last_position {:?}", last_position);
+
         Agent {
             id: AgentId { kdtree_hash: id },
             position,
+            last_position,
             mass,
             hp,
             social,
@@ -144,11 +155,32 @@ impl Agent {
         charging_momentum
     }
 
-    pub fn compute_self_velocity(&self) -> Vec2 {
-        Vec2::new(
+    pub fn compute_self_velocity(&mut self) {
+        self.velocity = Vec2::new(
             self.look_at_angle.cos() * self.speed,
             self.look_at_angle.sin() * self.speed,
-        )
+        );
+    }
+
+    pub fn compute_look_at_dir(&mut self) -> Vec2 {
+        Vec2::new(self.look_at_angle.cos(), self.look_at_angle.sin())
+    }
+
+    pub fn forward_dir(&self) -> Vec2 {
+        let verlet_velocity = self.position - self.last_position;
+
+        if verlet_velocity == Vec2::ZERO {
+            return Vec2::new(0.0, 0.0);
+        } else {
+            return verlet_velocity.normalize();
+        }
+    }
+
+    pub fn compute_left_and_right_dir(&self) -> (Vec2, Vec2) {
+        let left_dir = Vec2::new(-self.look_at_angle.sin(), self.look_at_angle.cos());
+        let right_dir = -left_dir;
+
+        (left_dir, right_dir)
     }
 
     // pub fn compute_agentsight_charging_momentum(
@@ -288,7 +320,7 @@ impl Agent {
     pub fn consume_food(&mut self, food: &Food) {
         //
         self.mass += food.mass;
-        self.energy += food.energy;
+        self.energy_shots += food.energy;
     }
 
     pub fn find_new_goal(&mut self, time: f32) {
@@ -493,9 +525,13 @@ impl Default for Agent {
             target_position: Vec2::new(0.0, 0.0),
             speed: 0.0,
             look_at_angle: eye_angle * 3.1415 * 2.0,
+            velocity: Vec2::ZERO,
 
             body: vec![],
             just_collided: false,
+
+            boost_time: 0.0,
+            boost: false,
 
             turning: Turning::None,
             acc: Acceleration::Forward,
@@ -505,7 +541,7 @@ impl Default for Agent {
 
             hp: 1.0,
             mass: 0.1,
-            energy: 1.0,
+            energy_shots: 100.0,
             satiety: 1.0,
             memory_time: 4.0,
 

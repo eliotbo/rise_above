@@ -78,8 +78,8 @@ pub fn camera_movevement_system(
                 transform.scale.x *= 1.0 + 0.1;
                 transform.scale.y *= 1.0 + 0.1;
             }
-            transform.scale.x = transform.scale.x.clamp(0.5, 100.0);
-            transform.scale.y = transform.scale.y.clamp(0.5, 100.0);
+            transform.scale.x = transform.scale.x.clamp(0.1, 100.0);
+            transform.scale.y = transform.scale.y.clamp(0.1, 100.0);
         }
     }
 }

@@ -35,6 +35,8 @@ pub const MAIN_CHARA_Z: f32 = 0.1;
 pub const TOTAL_BOOST_TIME: f32 = 0.3;
 
 pub const MASS_MULT: f32 = 1000.0;
+
+pub const ATOM_MULT: f32 = 0.05;
 // for debug_quad in query_debug.iter() {
 //     commands.entity(debug_quad).despawn();
 // }
@@ -275,12 +277,13 @@ fn setup(
     main_agent.position = Vec2::new(LEVEL_WIDTH / 2.0, 20.0);
     main_agent.last_position = main_agent.position;
 
-    let atom_size = Vec2::splat(0.05 * main_agent.mass * MASS_MULT);
+    let atom_size = Vec2::splat(ATOM_MULT * main_agent.mass * MASS_MULT);
     main_agent.body = nodes
         .iter()
         .enumerate()
         .map(|(k, node)| Body {
             atom_pos: *node * main_agent.mass,
+            rotation: Quat::from_rotation_z(main_agent.look_at_angle),
             atom_size: atom_size.length(),
             acceleration: Vec2::new(0.0, 0.0),
             entity: None,
@@ -292,8 +295,8 @@ fn setup(
     let mut transform =
         Transform::from_translation(Vec3::new(LEVEL_WIDTH / 2.0, 0.0, MAIN_CHARA_Z));
 
-    // transform.rotation =
-    //     Quat::from_rotation_z(main_agent.look_at_angle + std::f32::consts::PI / 1.0);
+    transform.rotation =
+        Quat::from_rotation_z(main_agent.look_at_angle + std::f32::consts::PI / 1.0);
 
     let core_id = commands
         .spawn_bundle(SpriteBundle {
@@ -306,8 +309,10 @@ fn setup(
             transform,
             ..Default::default()
         })
+        .insert(AgentId { kdtree_hash: 1 })
         .insert(MainCharacter { id: 1 })
         .id();
+    main_agent.entity = Some(core_id);
 
     println!("core id: {}", nodes[0]);
     println!("core id: {}", 0.49 * MASS_MULT * main_agent.mass);
@@ -355,7 +360,7 @@ fn setup(
 
         let mut agent_trans = Transform::from_translation(creature_pos.extend(0.09));
 
-        // agent_trans.rotation = Quat::from_rotation_z(agent.look_at_angle);
+        agent_trans.rotation = Quat::from_rotation_z(agent.look_at_angle);
 
         let npc_entity = commands
             .spawn_bundle(SpriteBundle {
@@ -370,14 +375,16 @@ fn setup(
             })
             .insert(AgentId { kdtree_hash: *id })
             .id();
+        agent.entity = Some(npc_entity);
 
-        let atom_size = Vec2::splat(0.05 * agent.mass * MASS_MULT);
+        let atom_size = Vec2::splat(ATOM_MULT * agent.mass * MASS_MULT);
 
         agent.body = nodes
             .iter()
             .enumerate()
             .map(|(k, node)| Body {
                 atom_pos: *node * agent.mass,
+                rotation: Quat::from_rotation_z(agent.look_at_angle),
                 atom_size: atom_size.length(),
                 acceleration: Vec2::new(0.0, 0.0),
                 entity: None,
@@ -500,9 +507,12 @@ pub fn agent_movement_debug(
 ) {
     for (mut transform, main_char) in &mut query.iter_mut() {
         let mut agent = game.agents.get_mut(&main_char.id).unwrap();
-        let forward = Vec2::new(0.0, 1.0) * 0.5;
+        // let forward = Vec2::new(0.0, 1.0) * 0.5;
+        let forward = agent.compute_look_at_dir();
         let left = Vec2::new(-1.0, 0.0) * 0.5;
         let mut acc = Vec2::ZERO;
+
+        let mut turn_angle = 0.0;
 
         match agent.acc {
             Acceleration::Forward => {
@@ -516,16 +526,24 @@ pub fn agent_movement_debug(
 
         match agent.turning {
             Turning::Left(mut delta_angle) => {
-                acc = acc + left;
+                // acc = acc + left;
+                turn_angle = 0.03;
             }
             Turning::Right(mut delta_angle) => {
-                acc = acc - left;
+                // acc = acc - left;
+                turn_angle = -0.03;
             }
             Turning::None => {}
         }
 
         agent.position += acc;
         transform.translation = agent.position.extend(2.2);
+
+        agent.look_at_angle = (agent.look_at_angle + turn_angle) % (2.0 * std::f32::consts::PI);
+
+        transform.translation = agent.position.extend(MAIN_CHARA_Z);
+
+        transform.rotation = Quat::from_rotation_z(agent.look_at_angle);
 
         let mut cam_transform = cam_query.single_mut();
         cam_transform.translation.x = agent.position.x;

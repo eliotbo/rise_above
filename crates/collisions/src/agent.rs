@@ -16,6 +16,7 @@ pub struct Atom;
 #[derive(Clone, Debug)]
 pub struct Body {
     pub atom_pos: Vec2,
+    pub rotation: Quat,
     pub atom_size: f32,
     pub acceleration: Vec2,
     pub entity: Option<Entity>,
@@ -62,6 +63,7 @@ pub struct Agent {
     pub sensors: Sensors,
 
     pub maybe_team_id: Option<u32>,
+    pub entity: Option<Entity>,
 }
 
 impl Agent {
@@ -85,7 +87,7 @@ impl Agent {
                     rng.gen_range(BOTTOM_LIMIT_X_MIN..BOTTOM_LIMIT_X_MAX),
                     rng.gen_range(0.0..BOTTOM_STAGE_LIMIT),
                 ) * POS_MULT;
-                mass = rng.gen_range(0.003..BOTTOM_STAGE_LIMIT);
+                mass = rng.gen_range(0.02..BOTTOM_STAGE_LIMIT);
                 hp = rng.gen_range(0.0..BOTTOM_STAGE_LIMIT);
                 hearing_range = MASS_MULT * mass * eyes;
                 sight_range = MASS_MULT * mass * eyes;
@@ -565,6 +567,7 @@ impl Default for Agent {
             sensors: sensors,
 
             maybe_team_id: None,
+            entity: None,
         };
     }
 }

@@ -16,7 +16,7 @@ pub const LEVEL_HEIGHT: f32 = 20000.0;
 
 pub const POS_MULT: f32 = 10000.0;
 
-pub const BOOST_TIMER: f32 = 0.3;
+// pub const BOOST_TIMER: f32 = 0.3;
 
 pub const MAIN_CHARA_Z: f32 = 0.1;
 pub const TOTAL_BOOST_TIME: f32 = 0.3;
@@ -39,27 +39,94 @@ pub const TOTAL_BOOST_TIME: f32 = 0.3;
 //         ..Default::default()
 //     })
 //     .insert(DebugQuad);
+use bevy_inspector_egui::{Inspectable, InspectorPlugin};
 
+#[derive(Inspectable)]
 pub struct MovementParams {
-    pub friction: f32,
+    #[inspectable(min = 0.00, max = 1.0, speed = 0.001)]
+    pub friction1: f32,
+
+    #[inspectable(min = 0.00, max = 1.0, speed = 0.001)]
+    pub friction2: f32,
+
+    #[inspectable(min = 10.0, max = 2000.0, speed = 1.0)]
     pub throttle: f32,
+
+    #[inspectable(min = 0.0001, max = 0.1, speed = 0.0001)]
     pub turning_speed_dependence: f32,
+
+    #[inspectable(min = 0.005, max = 1.0, speed = 0.0001)]
     pub backwards_mult: f32,
+
+    #[inspectable(min = 1.4, max = 50.0, speed = 0.2)]
     pub boost_mult: f32,
+
+    #[inspectable(min = 0.005, max = 0.5, speed = 0.0005)]
     pub rest_turn_speed: f32,
+
+    #[inspectable(min = 0.005, max = 0.5, speed = 0.0001)]
     pub max_turn_speed: f32,
+
+    #[inspectable(min = 0.02, max = 3.0, speed = 0.001)]
+    pub time_between_boosts: f32,
 }
 
 impl Default for MovementParams {
     fn default() -> Self {
         Self {
-            friction: 0.2,
+            friction1: 0.9,
+            friction2: 0.9,
             turning_speed_dependence: 0.03,
             backwards_mult: 0.3,
-            boost_mult: 3.0,
+            boost_mult: 5.0,
             rest_turn_speed: 0.02,
             max_turn_speed: 0.05,
-            throttle: 500.0,
+            throttle: 50.0,
+            time_between_boosts: 2.0,
+        }
+    }
+}
+
+impl MovementParams {
+    pub fn stage1() -> Self {
+        Self {
+            friction1: 0.9,
+            friction2: 0.9,
+            turning_speed_dependence: 0.03,
+            backwards_mult: 0.3,
+            boost_mult: 5.0,
+            rest_turn_speed: 0.02,
+            max_turn_speed: 0.05,
+            throttle: 50.0,
+            time_between_boosts: 2.0,
+        }
+    }
+
+    fn stage2() -> Self {
+        Self {
+            friction1: 0.1,
+            friction2: 0.13,
+            turning_speed_dependence: 0.03,
+            backwards_mult: 0.3,
+            boost_mult: 13.0,
+            rest_turn_speed: 0.013,
+            max_turn_speed: 0.05,
+            throttle: 200.0,
+            time_between_boosts: 0.5,
+        }
+    }
+
+    fn stage3() -> Self {
+        Self {
+            friction1: 0.09,
+            friction2: 0.013,
+            turning_speed_dependence: 0.05,
+            backwards_mult: 0.3,
+            boost_mult: 5.0,
+            rest_turn_speed: 0.02,
+            max_turn_speed: 0.1,
+            throttle: 1500.0,
+            time_between_boosts: 0.25,
         }
     }
 }
@@ -75,7 +142,8 @@ fn main() {
         })
         .add_plugins(DefaultPlugins)
         .add_plugin(CamPlugin)
-        .insert_resource(MovementParams::default())
+        .add_plugin(InspectorPlugin::<MovementParams>::new())
+        .insert_resource(MovementParams::stage1())
         .insert_resource(Game::new())
         .add_startup_system(setup)
         .add_system(main_character_inputs)
@@ -136,6 +204,7 @@ fn setup(mut commands: Commands, mut game: ResMut<Game>, time: Res<Time>) {
     let mut random_agent = Agent::gen_random(&GameStage::Bottom, 1); // the 1 is for the main character's id
     random_agent.position = Vec2::new(LEVEL_WIDTH / 2.0, 20.0);
     random_agent.last_position = random_agent.position;
+    // random_agent.mass = 0.05;
 
     let mut transform =
         Transform::from_translation(Vec3::new(LEVEL_WIDTH / 2.0, 0.0, MAIN_CHARA_Z));
@@ -186,6 +255,7 @@ pub fn main_character_inputs(
     mut query: Query<&MainCharacter>,
 
     time: Res<Time>,
+    move_params: Res<MovementParams>,
 ) {
     let main_char = query.single_mut();
     let mut agent = game.agents.get_mut(&main_char.id).unwrap();
@@ -207,7 +277,7 @@ pub fn main_character_inputs(
     }
 
     if (mouse_click.just_pressed(MouseButton::Left) || keyboard_input.pressed(KeyCode::Space))
-        && time.seconds_since_startup() as f32 - agent.boost_time > BOOST_TIMER
+        && time.seconds_since_startup() as f32 - agent.boost_time > move_params.time_between_boosts
         && agent.energy_shots > 1.0
     {
         agent.boost = true;
@@ -246,7 +316,8 @@ pub fn agent_movement(
         // let max_turn_speed = 0.05;
         // let throttle = 10000.0;
 
-        let friction = move_params.friction;
+        let friction1 = move_params.friction1;
+        let friction2 = move_params.friction2;
         let turning_speed_dependence = move_params.turning_speed_dependence;
         let backwards_mult = move_params.backwards_mult;
         let boost_mult = move_params.boost_mult;
@@ -300,7 +371,8 @@ pub fn agent_movement(
             Turning::None => {}
         }
 
-        let friction_force = -friction * verlet_velocity.length().powf(2.0) * velocity_dir;
+        let friction_force = -friction1 * verlet_velocity.length() * velocity_dir
+            - friction2 * verlet_velocity.length().powf(2.0) * velocity_dir;
 
         acc += friction_force;
 

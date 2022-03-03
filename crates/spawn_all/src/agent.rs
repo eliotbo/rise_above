@@ -77,7 +77,7 @@ impl Agent {
                     rng.gen_range(BOTTOM_LIMIT_X_MIN..BOTTOM_LIMIT_X_MAX),
                     rng.gen_range(0.0..BOTTOM_STAGE_LIMIT),
                 ) * POS_MULT;
-                mass = rng.gen_range(0.0..BOTTOM_STAGE_LIMIT);
+                mass = rng.gen_range(0.003..BOTTOM_STAGE_LIMIT);
                 hp = rng.gen_range(0.0..BOTTOM_STAGE_LIMIT);
                 hearing_range = rng.gen_range(0.0..BOTTOM_STAGE_LIMIT);
                 sight_range = rng.gen_range(0.0..BOTTOM_STAGE_LIMIT);

@@ -15,31 +15,40 @@ use std::collections::HashMap;
 use crate::agent::*;
 use crate::libaaa::*;
 
-use crate::{ATOM_MULT, MASS_MULT};
+// use crate::{ATOM_MULT, MASS_MULT};
 // use crate::vec2::*;
 
 // use bevy::prelude::*;
 
-pub const NUM_AGENTS: usize = 20;
+pub const NUM_AGENTS: usize = 100;
 pub const NUM_ITEMS: usize = 10;
 pub const NUM_FOODS: usize = 100;
 
-// stage 1: y position from 0 to 0.01;
-// stage 2: y position from 0.01 to 0.1;
-// stage 3: y position from 0.1 to 1.0;
+pub const LEVEL_WIDTH: f32 = 30000.0;
+pub const LEVEL_HEIGHT: f32 = 60000.0;
+
+// pub const POS_MULT: f32 = 10000.0;
+
+// pub const BOOST_TIMER: f32 = 0.3;
+
+pub const MAIN_CHARA_Z: f32 = 0.1;
+pub const TOTAL_BOOST_TIME: f32 = 0.3;
+
+pub const MASS_MULT: f32 = 1000.0;
+
+pub const ATOM_MULT: f32 = 0.05;
 
 pub const BOTTOM_STAGE_LIMIT: f32 = 0.05;
 pub const MID_STAGE_LIMIT: f32 = 0.2;
-pub const TOP_STAGE_LIMIT: f32 = 1.0;
+pub const TOP_STAGE_LIMIT: f32 = 0.95;
 
 pub const BOTTOM_LIMIT_X_MIN: f32 = 0.45;
 pub const BOTTOM_LIMIT_X_MAX: f32 = 0.55;
 
-// start sight range is 1.0
-// stage 2 is 10.0
-// stage 3 is 100.0
-
 type TeamId = u32;
+
+#[derive(Component)]
+pub struct NPC;
 
 #[derive(Clone, Debug)]
 pub struct Team {
@@ -720,163 +729,14 @@ pub fn update_agent_kdtree(mut game: ResMut<Game>, mut kdtrees: ResMut<KdTrees>)
 
 #[derive(Debug)]
 pub struct AgentCollisionInfo {
-    pub id1: u32,
-    pub atom_index1: usize,
+    pub agent_id1: u32,
+    pub atom_entity1: Entity,
     pub acceleration1: Vec2,
-    pub id2: u32,
-    pub atom_index2: usize,
+    pub velocity1: Vec2,
+    pub agent_id2: u32,
+    pub atom_entity2: Entity,
     pub acceleration2: Vec2,
-}
-
-pub fn collisions_BACKUP(
-    mut game: ResMut<Game>,
-    mut kdtrees: ResMut<KdTrees>,
-    mut sprite_query: Query<&mut Sprite, With<Atom>>,
-) {
-    let agent_bodies = game
-        .agents
-        .iter()
-        .map(|(id, x)| (*id, x.body.clone()))
-        .collect::<HashMap<_, _>>();
-
-    let mut collisions: Vec<AgentCollisionInfo> = Vec::new();
-
-    for (id, agent) in game.agents.iter() {
-        // let agent_pos = agent_positions.get(id).unwrap();
-
-        for body in agent.body.iter() {
-            if body.is_used {
-                // if agent.id.kdtree_hash == 1 {
-                //     println!("WE HAVE A WINNER {:?}", 1);
-                // }
-                let body_entity = body.entity.unwrap();
-                let mut sprite1 = sprite_query.get_mut(body_entity).unwrap();
-                sprite1.color = Color::GREEN;
-            }
-        }
-
-        let closest_agents = kdtrees
-            .agent_kdtree
-            .nearest(&[agent.position.x, agent.position.y], 2, &squared_euclidean)
-            .unwrap();
-
-        // the closest is itself, so we ignore the first item
-        let closest_agent_id = closest_agents[1].1;
-        let closest_agent_dist = closest_agents[1].0;
-
-        let closest_agent = game.agents.get(&closest_agent_id).unwrap();
-
-        let mut agent_pair_checked = Vec::new();
-
-        // for (other_id, closest_agent) in agent.sensors.agent_sight.iter() {
-        // perhaps a collision
-
-        // nodes are at a max distance of 0.5 * mass * MASS_MULT from the center of the quad
-        let distance_test = (closest_agent.mass + agent.mass) * MASS_MULT * 0.5;
-
-        // println!("closest: {}", closest_agent_dist);
-
-        // squared euclidian
-        if closest_agent_dist < distance_test * distance_test {
-            // 1.00 = buffer distance?
-
-            if !agent_pair_checked.contains(&(closest_agent.id.kdtree_hash, agent.id.kdtree_hash)) {
-                agent_pair_checked.push((closest_agent.id.kdtree_hash, agent.id.kdtree_hash));
-                agent_pair_checked.push((agent.id.kdtree_hash, closest_agent.id.kdtree_hash));
-
-                let body = &agent.body;
-                let other_body = agent_bodies.get(&closest_agent.id.kdtree_hash).unwrap();
-
-                for (j, atom) in body.iter().filter(|b| b.is_used).enumerate() {
-                    let mut found_collision = false;
-
-                    for (k, other_atom) in other_body.iter().filter(|b| b.is_used).enumerate() {
-                        let global_atom_pos = atom.atom_pos + agent.position;
-                        let other_global_atom_pos = other_atom.atom_pos + closest_agent.position;
-
-                        let dist = (global_atom_pos - other_global_atom_pos).length();
-
-                        // let atom_test_dist = 0.05 * agent.mass * MASS_MULT * 0.5
-                        //     + 0.05 * closest_agent.mass * MASS_MULT * 0.5;
-
-                        // there is a collision. Must apply acceleration to atom
-                        if dist < (atom.atom_size + other_atom.atom_size) / 2.0 {
-                            // let u1 = agent.position - agent.last_position;
-                            // let u2 = closest_agent.position - closest_agent.last_position;
-
-                            let u1 = agent.velocity;
-                            let u2 = Vec2::new(
-                                closest_agent.look_at_angle.cos() * closest_agent.speed,
-                                closest_agent.look_at_angle.sin() * closest_agent.speed,
-                            );
-
-                            // let u1 =
-
-                            let m_ratio1 =
-                                2.0 * closest_agent.mass / (closest_agent.mass + agent.mass);
-                            let m_ratio2 = 2.0 * agent.mass / (closest_agent.mass + agent.mass);
-
-                            let deltax1 = agent.position - closest_agent.position;
-                            let deltax2 = closest_agent.position - agent.position;
-
-                            let dot1 = (u1 - u2).dot(deltax1);
-                            let dot2 = (u2 - u1).dot(deltax2);
-
-                            let len_deltax1 = deltax1.length();
-                            let len_deltax2 = deltax2.length();
-
-                            let v1 = u1 - m_ratio1 * dot1 * deltax1 / (len_deltax1 * len_deltax1);
-                            let v2 = u2 - m_ratio2 * dot2 * deltax2 / (len_deltax2 * len_deltax2);
-
-                            let impulse1 = agent.mass * (v2 - v1);
-                            let impulse2 = closest_agent.mass * (v1 - v2);
-
-                            // impule = m * a * dt
-                            let acceleration1 = impulse1 / agent.mass * 60.0; // 60 fps
-                            let acceleration2 = impulse2 / closest_agent.mass * 60.0; // 60 fps
-
-                            let collision = AgentCollisionInfo {
-                                id1: agent.id.kdtree_hash,
-                                atom_index1: j,
-                                acceleration1,
-                                id2: closest_agent.id.kdtree_hash,
-                                atom_index2: k,
-                                acceleration2,
-                            };
-                            println!("collision: {:?}", collision);
-                            collisions.push(collision);
-                            found_collision = true;
-
-                            let mut sprite1 = sprite_query.get_mut(atom.entity.unwrap()).unwrap();
-                            sprite1.color = Color::RED;
-
-                            let mut sprite2 =
-                                sprite_query.get_mut(other_atom.entity.unwrap()).unwrap();
-                            sprite2.color = Color::RED;
-
-                            break;
-                        }
-                        if found_collision {
-                            break;
-                        }
-                    }
-                    if found_collision {
-                        break;
-                    }
-                }
-                // }
-            }
-        }
-    }
-    for collision in collisions {
-        let mut agent = game.agents.get_mut(&collision.id1).unwrap();
-        agent.body[collision.atom_index1].acceleration = collision.acceleration1;
-        agent.just_collided = true;
-
-        let mut closest_agent = game.agents.get_mut(&collision.id2).unwrap();
-        closest_agent.body[collision.atom_index2].acceleration = collision.acceleration2;
-        closest_agent.just_collided = true;
-    }
+    pub velocity2: Vec2,
 }
 
 pub fn collisions(
@@ -1012,17 +872,32 @@ pub fn collisions(
                             let acceleration1 = impulse1 / agent.mass * 60.0; // 60 fps
                             let acceleration2 = impulse2 / closest_agent.mass * 60.0; // 60 fps
 
-                            // let collision = AgentCollisionInfo {
-                            //     id1: agent.id.kdtree_hash,
-                            //     atom_index1: j,
-                            //     acceleration1,
-                            //     id2: closest_agent.id.kdtree_hash,
-                            //     atom_index2: k,
-                            //     acceleration2,
-                            // };
+                            let mut collision_line = closest_agent.position - agent.position;
+                            if collision_line != Vec2::ZERO {
+                                collision_line = collision_line.normalize();
+                            } else {
+                                collision_line = Vec2::new(1.0, 0.0);
+                            }
+
+                            let velocity1 = -collision_line * m_ratio1 * 4.0;
+                            let velocity2 = collision_line * m_ratio2 * 4.0;
+
+                            let collision = AgentCollisionInfo {
+                                agent_id1: agent.id.kdtree_hash,
+                                atom_entity1: *child1,
+                                acceleration1,
+                                // velocity1: v1,
+                                velocity1,
+                                agent_id2: closest_agent.id.kdtree_hash,
+                                atom_entity2: child2.clone(),
+                                acceleration2,
+                                velocity2,
+                                // velocity2: v2,
+                            };
                             // println!("collision: {:?}", collision);
 
-                            // collisions.push(collision);
+                            collisions.push(collision);
+
                             found_collision = true;
                             println!("collision: {}", dist);
 
@@ -1053,13 +928,16 @@ pub fn collisions(
             }
         }
     }
+
     for collision in collisions {
-        let mut agent = game.agents.get_mut(&collision.id1).unwrap();
-        agent.body[collision.atom_index1].acceleration = collision.acceleration1;
+        let mut agent = game.agents.get_mut(&collision.agent_id1).unwrap();
+        // agent.body[collision.atom_index1].acceleration = collision.acceleration1;
+        agent.last_position = agent.position - collision.velocity1;
         agent.just_collided = true;
 
-        let mut closest_agent = game.agents.get_mut(&collision.id2).unwrap();
-        closest_agent.body[collision.atom_index2].acceleration = collision.acceleration2;
+        let mut closest_agent = game.agents.get_mut(&collision.agent_id2).unwrap();
+        closest_agent.last_position = closest_agent.position - collision.velocity2;
+        // closest_agent.body[collision.atom_index2].acceleration = collision.acceleration2;
         closest_agent.just_collided = true;
     }
 }

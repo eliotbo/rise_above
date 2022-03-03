@@ -35,6 +35,7 @@ pub struct Agent {
     pub velocity: Vec2,
     pub target_position: Vec2,
     pub main_char_target_pos: Option<Vec2>,
+    pub radius: f32,
 
     pub body: Vec<Body>,
     pub just_collided: bool, // compute the atom damped bounce animation
@@ -84,9 +85,9 @@ impl Agent {
         match stage {
             bottom @ GameStage::Bottom => {
                 position = Vec2::new(
-                    rng.gen_range(BOTTOM_LIMIT_X_MIN..BOTTOM_LIMIT_X_MAX),
-                    rng.gen_range(0.0..BOTTOM_STAGE_LIMIT),
-                ) * POS_MULT;
+                    rng.gen_range(BOTTOM_LIMIT_X_MIN..BOTTOM_LIMIT_X_MAX) * LEVEL_WIDTH,
+                    rng.gen_range(0.0..BOTTOM_STAGE_LIMIT) * LEVEL_HEIGHT,
+                );
                 mass = rng.gen_range(0.02..BOTTOM_STAGE_LIMIT);
                 hp = rng.gen_range(0.0..BOTTOM_STAGE_LIMIT);
                 hearing_range = MASS_MULT * mass * eyes;
@@ -95,9 +96,9 @@ impl Agent {
             }
             mid @ GameStage::Mid => {
                 position = Vec2::new(
-                    rng.gen_range(0.0..1.0),
-                    rng.gen_range(BOTTOM_STAGE_LIMIT..MID_STAGE_LIMIT),
-                ) * POS_MULT;
+                    rng.gen_range(0.0..1.0) * LEVEL_WIDTH,
+                    rng.gen_range(BOTTOM_STAGE_LIMIT..MID_STAGE_LIMIT) * LEVEL_HEIGHT,
+                );
                 mass = rng.gen_range(BOTTOM_STAGE_LIMIT..MID_STAGE_LIMIT);
                 hp = rng.gen_range(BOTTOM_STAGE_LIMIT..MID_STAGE_LIMIT);
                 hearing_range = MASS_MULT * mass * eyes;
@@ -107,9 +108,9 @@ impl Agent {
             }
             top @ GameStage::Top => {
                 position = Vec2::new(
-                    rng.gen_range(0.0..TOP_STAGE_LIMIT),
-                    rng.gen_range(MID_STAGE_LIMIT..TOP_STAGE_LIMIT),
-                ) * POS_MULT;
+                    rng.gen_range(0.02..TOP_STAGE_LIMIT) * LEVEL_WIDTH,
+                    rng.gen_range(MID_STAGE_LIMIT..TOP_STAGE_LIMIT) * LEVEL_HEIGHT,
+                );
                 mass = rng.gen_range(MID_STAGE_LIMIT..TOP_STAGE_LIMIT);
                 hp = rng.gen_range(MID_STAGE_LIMIT..TOP_STAGE_LIMIT);
                 hearing_range = MASS_MULT * mass * eyes;
@@ -332,6 +333,8 @@ impl Agent {
         //
         self.mass += food.mass;
         self.energy_shots += food.energy;
+
+        self.radius = self.mass * MASS_MULT * 0.5;
     }
 
     pub fn find_new_goal(&mut self, time: f32) {
@@ -524,6 +527,7 @@ impl Default for Agent {
         // let eye_angle: f32 = rng.gen();
 
         let sensors = Sensors::default();
+        let mass = 0.1;
 
         return Self {
             // id: id,
@@ -538,6 +542,7 @@ impl Default for Agent {
             look_at_angle: -3.1415 / 2.0,
             velocity: Vec2::ZERO,
             main_char_target_pos: None,
+            radius: mass * MASS_MULT * 0.5,
 
             body: vec![],
             just_collided: false,
@@ -552,7 +557,7 @@ impl Default for Agent {
             social: Social::default(),
 
             hp: 1.0,
-            mass: 0.1,
+            mass,
             energy_shots: 100.0,
             satiety: 1.0,
             memory_time: 4.0,

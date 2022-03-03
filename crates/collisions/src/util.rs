@@ -48,15 +48,64 @@ pub struct Team {
     pub agents: Vec<AgentId>,
 }
 
+pub struct KdTrees {
+    pub agent_kdtree: KdTree<f32, u32, [f32; 2]>,
+    pub item_kdtree: KdTree<f32, u32, [f32; 2]>,
+    pub food_kdtree: KdTree<f32, u32, [f32; 2]>,
+}
+
+impl KdTrees {
+    pub fn new() -> Self {
+        KdTrees {
+            agent_kdtree: KdTree::with_capacity(2, NUM_AGENTS),
+            item_kdtree: KdTree::with_capacity(2, NUM_ITEMS),
+            food_kdtree: KdTree::with_capacity(2, NUM_FOODS),
+        }
+    }
+
+    pub fn populate(&mut self, game: &Game) {
+        self.gen_agent_kdtree(&game.agents);
+        self.gen_item_kdtree(&game.items);
+        self.gen_food_kdtree(&game.foods);
+    }
+
+    pub fn gen_agent_kdtree(&mut self, agents: &HashMap<u32, Agent>) -> KdTree<f32, u32, [f32; 2]> {
+        let dimensions = 2;
+        let mut kdtree = KdTree::with_capacity(dimensions, NUM_AGENTS);
+        agents.iter().for_each(|(id, agent)| {
+            kdtree
+                .add([agent.position.x, agent.position.y], *id)
+                .unwrap();
+        });
+
+        kdtree
+    }
+
+    pub fn gen_item_kdtree(&mut self, items: &HashMap<u32, Item>) -> KdTree<f32, u32, [f32; 2]> {
+        let dimensions = 2;
+        let mut kdtree = KdTree::with_capacity(dimensions, 9);
+        items.iter().for_each(|(id, item)| {
+            kdtree.add([item.position.x, item.position.y], *id).unwrap();
+        });
+        kdtree
+    }
+
+    pub fn gen_food_kdtree(&mut self, foods: &HashMap<u32, Food>) -> KdTree<f32, u32, [f32; 2]> {
+        let dimensions = 2;
+        let mut kdtree = KdTree::with_capacity(dimensions, 9);
+        foods.iter().for_each(|(id, food)| {
+            kdtree.add([food.position.x, food.position.y], *id).unwrap();
+        });
+        kdtree
+    }
+}
+
 pub struct Game {
     pub time: f32,
     pub game_stage: GameStage,
     pub agents: HashMap<u32, Agent>,
     pub items: HashMap<u32, Item>,
     pub foods: HashMap<u32, Food>,
-    pub agent_kdtree: KdTree<f32, u32, [f32; 2]>,
-    pub item_kdtree: KdTree<f32, u32, [f32; 2]>,
-    pub food_kdtree: KdTree<f32, u32, [f32; 2]>,
 
     pub teams: HashMap<TeamId, Team>,
 }
@@ -71,9 +120,7 @@ impl Game {
         Game {
             time: 0.0,
             game_stage: GameStage::Bottom,
-            agent_kdtree: Self::gen_agent_kdtree(&agents),
-            item_kdtree: Self::gen_item_kdtree(&items),
-            food_kdtree: Self::gen_food_kdtree(&foods),
+
             agents: agents,
             items: items,
             foods: foods,
@@ -182,19 +229,7 @@ impl Game {
         foods
     }
 
-    pub fn gen_agent_kdtree(agents: &HashMap<u32, Agent>) -> KdTree<f32, u32, [f32; 2]> {
-        let dimensions = 2;
-        let mut kdtree = KdTree::with_capacity(dimensions, NUM_AGENTS);
-        agents.iter().for_each(|(id, agent)| {
-            kdtree
-                .add([agent.position.x, agent.position.y], *id)
-                .unwrap();
-        });
-
-        kdtree
-    }
-
-    pub fn update_agent_kdtree(&mut self) {
+    pub fn update_agent_kdtree(&self, mut agent_kdtree: &mut KdTree<f32, u32, [f32; 2]>) {
         let dimensions = 2;
         let mut kdtree = KdTree::with_capacity(dimensions, NUM_AGENTS);
         self.agents.iter().for_each(|(id, agent)| {
@@ -203,25 +238,7 @@ impl Game {
                 .unwrap();
         });
 
-        self.agent_kdtree = kdtree;
-    }
-
-    pub fn gen_item_kdtree(items: &HashMap<u32, Item>) -> KdTree<f32, u32, [f32; 2]> {
-        let dimensions = 2;
-        let mut kdtree = KdTree::with_capacity(dimensions, 9);
-        items.iter().for_each(|(id, item)| {
-            kdtree.add([item.position.x, item.position.y], *id).unwrap();
-        });
-        kdtree
-    }
-
-    pub fn gen_food_kdtree(foods: &HashMap<u32, Food>) -> KdTree<f32, u32, [f32; 2]> {
-        let dimensions = 2;
-        let mut kdtree = KdTree::with_capacity(dimensions, 9);
-        foods.iter().for_each(|(id, food)| {
-            kdtree.add([food.position.x, food.position.y], *id).unwrap();
-        });
-        kdtree
+        *agent_kdtree = kdtree;
     }
 }
 
@@ -346,14 +363,14 @@ pub struct MainCharacter {
     pub id: u32,
 }
 
-fn see(game: &mut Game) {
+pub fn see(mut game: ResMut<Game>, kdtrees: ResMut<KdTrees>, time: Res<Time>) {
     let all_agents = game.agents.clone();
     let all_items = game.items.clone();
     let all_foods = game.foods.clone();
 
     for (hash_id, mut agent) in &mut game.agents {
         // checks if agent is close enough to be seen
-        if let Ok(dist_id_array) = game.agent_kdtree.within(
+        if let Ok(dist_id_array) = kdtrees.agent_kdtree.within(
             &[agent.position.x, agent.position.y],
             agent.sensors.sight_range,
             &squared_euclidean,
@@ -377,73 +394,74 @@ fn see(game: &mut Game) {
                     Vec2::new(agent.look_at_angle.cos(), agent.look_at_angle.sin());
                 // if the angles differ by more than 180 degrees, then the other agent is on the other side of the agent
                 // if agent_looking_direction.dot(direction_to_other_agent) > 0.0 {
-                agent.update_agent_sight(game.time, dist, other_agent);
+                agent.update_agent_sight(time.seconds_since_startup() as f32, dist, other_agent);
 
                 // despawn and spawn green cube upon seeing
                 // }
             }
-        }
 
-        if let Ok(dist_id_array) = game.item_kdtree.within(
-            &[agent.position.x, agent.position.y],
-            agent.sensors.sight_range,
-            &squared_euclidean,
-        ) {
-            //
-            // agent.sensors.sight.
+            if let Ok(dist_id_array) = kdtrees.item_kdtree.within(
+                &[agent.position.x, agent.position.y],
+                agent.sensors.sight_range,
+                &squared_euclidean,
+            ) {
+                //
+                // agent.sensors.sight.
 
-            for (dist, id) in dist_id_array {
-                let item = all_items.get(&id).unwrap();
-                // let other_agent_pos = other_agent.position;
-                let direction_to_item = item.position - agent.position;
+                for (dist, id) in dist_id_array {
+                    let item = all_items.get(&id).unwrap();
+                    // let other_agent_pos = other_agent.position;
+                    let direction_to_item = item.position - agent.position;
 
-                // let dir_to_other_angle = direction_to_other_agent.y.atan2(direction_to_other_agent.x);
-                let agent_looking_direction =
-                    Vec2::new(agent.look_at_angle.cos(), agent.look_at_angle.sin());
-                // if the angles differ by more than 180 degrees, then the other agent is on the other side of the agent
-                // if agent_looking_direction.dot(direction_to_item) > 0.0 {
-                agent.update_item_sight(game.time, dist, item);
+                    // let dir_to_other_angle = direction_to_other_agent.y.atan2(direction_to_other_agent.x);
+                    let agent_looking_direction =
+                        Vec2::new(agent.look_at_angle.cos(), agent.look_at_angle.sin());
+                    // if the angles differ by more than 180 degrees, then the other agent is on the other side of the agent
+                    // if agent_looking_direction.dot(direction_to_item) > 0.0 {
+                    agent.update_item_sight(time.seconds_since_startup() as f32, dist, item);
 
-                // despawn and spawn green cube upon seeing
-                // }
+                    // despawn and spawn green cube upon seeing
+                    // }
+                }
             }
-        }
 
-        if let Ok(dist_id_array) = game.food_kdtree.within(
-            &[agent.position.x, agent.position.y],
-            agent.sensors.sight_range,
-            &squared_euclidean,
-        ) {
-            //
-            // agent.sensors.sight.
+            if let Ok(dist_id_array) = kdtrees.food_kdtree.within(
+                &[agent.position.x, agent.position.y],
+                agent.sensors.sight_range,
+                &squared_euclidean,
+            ) {
+                //
+                // agent.sensors.sight.
 
-            for (dist, id) in dist_id_array {
-                let food = all_foods.get(&id).unwrap();
-                // let other_agent_pos = other_agent.position;
-                let direction_to_food = food.position - agent.position;
+                for (dist, id) in dist_id_array {
+                    let food = all_foods.get(&id).unwrap();
+                    // let other_agent_pos = other_agent.position;
+                    let direction_to_food = food.position - agent.position;
 
-                // let dir_to_other_angle = direction_to_other_agent.y.atan2(direction_to_other_agent.x);
-                let agent_looking_direction =
-                    Vec2::new(agent.look_at_angle.cos(), agent.look_at_angle.sin());
-                // if the angles differ by more than 180 degrees, then the other agent is on the other side of the agent
-                // if agent_looking_direction.dot(direction_to_food) > 0.0 {
-                agent.update_food_sight(game.time, dist, food);
+                    // let dir_to_other_angle = direction_to_other_agent.y.atan2(direction_to_other_agent.x);
+                    let agent_looking_direction =
+                        Vec2::new(agent.look_at_angle.cos(), agent.look_at_angle.sin());
+                    // if the angles differ by more than 180 degrees, then the other agent is on the other side of the agent
+                    // if agent_looking_direction.dot(direction_to_food) > 0.0 {
+                    agent.update_food_sight(time.seconds_since_startup() as f32, dist, food);
 
-                // despawn and spawn green cube upon seeing
-                // }
+                    // despawn and spawn green cube upon seeing
+                    // }
+                }
             }
         }
     }
 }
 
-fn forget(game: &mut Game) {
+fn forget(mut game: ResMut<Game>, kdtrees: ResMut<KdTrees>, time: Res<Time>) {
     let mut rng = thread_rng();
+
     for (_hash_id, mut agent) in &mut game.agents {
         // run once every ten frames on average
         if rng.gen::<f32>() < 0.1 {
-            agent.forget_agents(game.time);
-            agent.forget_items(game.time);
-            agent.forget_food(game.time);
+            agent.forget_agents(time.seconds_since_startup() as f32);
+            agent.forget_items(time.seconds_since_startup() as f32);
+            agent.forget_food(time.seconds_since_startup() as f32);
         }
     }
 }
@@ -457,7 +475,7 @@ pub struct PosMass {
     pub mass: f32,
 }
 
-pub fn compute_acc_food(game: &mut Game) {
+pub fn compute_acc_food(mut game: ResMut<Game>, kdtrees: Res<KdTrees>) {
     // compute forces on food
     let mut pos_mass: Vec<PosMass> = game
         .agents
@@ -480,7 +498,7 @@ pub fn compute_acc_food(game: &mut Game) {
 
     pos_mass.append(&mut food_vacuum_pos_and_mass);
 
-    let food_kd_tree = &game.food_kdtree;
+    let food_kd_tree = &kdtrees.food_kdtree;
 
     pos_mass.iter().for_each(|pos_mass| {
         let pos = pos_mass.position;
@@ -501,29 +519,30 @@ pub fn compute_acc_food(game: &mut Game) {
     });
 }
 
-pub fn eat_food(game: &mut Game) {
+pub fn eat_food(mut game: ResMut<Game>, kdtrees: Res<KdTrees>) {
     let mut foods_to_remove: Vec<u32> = Vec::new();
 
-    game.agents.iter_mut().for_each(|(_, mut agent)| {
-        //
-        // TODO: tweak this
-        let agent_food_radius = agent.mass * 0.5;
-        if let Ok(dist_id_array) = game.food_kdtree.within(
-            &[agent.position.x, agent.position.y],
-            agent_food_radius,
-            &squared_euclidean,
-        ) {
-            //
-            dist_id_array.iter().for_each(|(_dist, id)| {
-                foods_to_remove.push(**id);
-                if let Some(food) = game.foods.get(*id) {
-                    agent.consume_food(food);
-                } else {
-                    println!("food not found");
-                }
-            });
-        }
-    });
+    // game.agents.iter_mut().for_each(|(_, mut agent)| {
+    //     //
+    //     // TODO: tweak this
+    //     let agent_food_radius = agent.mass * 0.5;
+    //     if let Ok(dist_id_array) = kdtrees.food_kdtree.within(
+    //         &[agent.position.x, agent.position.y],
+    //         agent_food_radius,
+    //         &squared_euclidean,
+    //     ) {
+    //         //
+    //         dist_id_array.iter().for_each(|(_dist, id)| {
+    //             foods_to_remove.push(**id);
+    //             if let Some(food) = game.foods.get(*id) {
+    //                 // TODO: make food disappear
+    //                 agent.consume_food(food);
+    //             } else {
+    //                 println!("food not found");
+    //             }
+    //         });
+    //     }
+    // });
 
     foods_to_remove.iter().for_each(|id| {
         game.foods.remove(id);
@@ -646,8 +665,8 @@ pub fn load_character(keyboard: Res<Input<KeyCode>>, mut query: Query<&mut Marke
     }
 }
 
-pub fn update_agent_kdtree(game: &mut Game) {
-    game.update_agent_kdtree();
+pub fn update_agent_kdtree(mut game: ResMut<Game>, mut kdtrees: ResMut<KdTrees>) {
+    game.update_agent_kdtree(&mut kdtrees.agent_kdtree);
 }
 
 pub struct AgentCollisionInfo {
@@ -658,7 +677,7 @@ pub struct AgentCollisionInfo {
     pub atom_index2: usize,
     pub acceleration2: Vec2,
 }
-pub fn collisions(game: &mut Game) {
+pub fn collisions(mut game: ResMut<Game>) {
     let agent_bodies = game
         .agents
         .iter()

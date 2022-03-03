@@ -174,19 +174,28 @@ fn main() {
         .insert_resource(Cursor::default())
         .insert_resource(MovementParams::stage1())
         .insert_resource(Game::new())
+        .insert_resource(KdTrees::new())
         .add_startup_system(setup)
         .add_system(main_character_inputs)
         .add_system(agent_movement)
         .add_system(record_mouse_events_system)
+        .add_system(collisions)
+        .add_system(see)
         // .add_system(load_character)
         // .add_system(load_character_auto)
         .run();
 }
 
-fn setup(mut commands: Commands, mut game: ResMut<Game>, time: Res<Time>) {
+fn setup(
+    mut commands: Commands,
+    mut game: ResMut<Game>,
+    mut kdtrees: ResMut<KdTrees>,
+    // time: Res<Time>,
+) {
     // commands
     //     .spawn_bundle(OrthographicCameraBundle::new_2d())
     //     .insert(Cam::default());
+    kdtrees.as_mut().populate(game.as_ref());
 
     commands
         .spawn_bundle(OrthographicCameraBundle {

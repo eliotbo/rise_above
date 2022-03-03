@@ -34,6 +34,7 @@ pub const POS_MULT: f32 = 10000.0;
 pub const MAIN_CHARA_Z: f32 = 0.1;
 pub const TOTAL_BOOST_TIME: f32 = 0.3;
 
+pub const MASS_MULT: f32 = 1000.0;
 // for debug_quad in query_debug.iter() {
 //     commands.entity(debug_quad).despawn();
 // }
@@ -177,13 +178,20 @@ fn main() {
         .insert_resource(KdTrees::new())
         .add_startup_system(setup)
         .add_system(main_character_inputs)
-        .add_system(agent_movement)
+        // .add_system(agent_movement)
         .add_system(record_mouse_events_system)
         .add_system(collisions)
         .add_system(see)
+        .add_system(update_agent_kdtree)
+        .add_system(forget)
+        .add_system(agent_movement_debug)
         // .add_system(load_character)
         // .add_system(load_character_auto)
         .run();
+}
+
+pub fn update_agent_kdtree(mut kdtrees: ResMut<KdTrees>, game: Res<Game>) {
+    kdtrees.gen_agent_kdtree(&game.agents);
 }
 
 fn setup(
@@ -241,6 +249,7 @@ fn setup(
         ..Default::default()
     });
 
+    // LOAD CHARACTER
     let mut path = std::env::current_dir().unwrap().join("notme.cha");
 
     // path = path;
@@ -256,22 +265,35 @@ fn setup(
     let nodes = loaded_character
         .data
         .iter()
-        .map(|node| node.pos)
+        .map(|node| node.pos * MASS_MULT)
         .collect::<Vec<_>>();
 
     // let character: MarkerInstanceMatData = loaded_character.clone().into();
 
     //////////////////// main character////////////////////////////////////////////////////////////////////////
-    let mut random_agent = Agent::gen_random(&GameStage::Bottom, 1); // the 1 is for the main character's id
-    random_agent.position = Vec2::new(LEVEL_WIDTH / 2.0, 20.0);
-    random_agent.last_position = random_agent.position;
-    // random_agent.mass = 0.05;
+    let mut main_agent = Agent::gen_random(&GameStage::Bottom, 1); // the 1 is for the main character's id
+    main_agent.position = Vec2::new(LEVEL_WIDTH / 2.0, 20.0);
+    main_agent.last_position = main_agent.position;
+
+    let atom_size = Vec2::splat(0.05 * main_agent.mass * MASS_MULT);
+    main_agent.body = nodes
+        .iter()
+        .enumerate()
+        .map(|(k, node)| Body {
+            atom_pos: *node * main_agent.mass,
+            atom_size: atom_size.length(),
+            acceleration: Vec2::new(0.0, 0.0),
+            entity: None,
+            is_used: false,
+        })
+        .collect::<Vec<_>>();
+    // main_agent.mass = 0.05;
 
     let mut transform =
         Transform::from_translation(Vec3::new(LEVEL_WIDTH / 2.0, 0.0, MAIN_CHARA_Z));
 
     // transform.rotation =
-    //     Quat::from_rotation_z(random_agent.look_at_angle + std::f32::consts::PI / 1.0);
+    //     Quat::from_rotation_z(main_agent.look_at_angle + std::f32::consts::PI / 1.0);
 
     let core_id = commands
         .spawn_bundle(SpriteBundle {
@@ -287,46 +309,53 @@ fn setup(
         .insert(MainCharacter { id: 1 })
         .id();
 
-    nodes.iter().for_each(|pos| {
-        if pos.length() < 0.49 {
-            let transform = Transform::from_translation(pos.extend(4.0) * 50.0);
+    println!("core id: {}", nodes[0]);
+    println!("core id: {}", 0.49 * MASS_MULT * main_agent.mass);
+
+    nodes.iter().enumerate().for_each(|(k, pos)| {
+        if pos.length() < 0.49 * MASS_MULT {
+            let transform = Transform::from_translation(pos.extend(4.0) * main_agent.mass);
 
             let child_id = commands
                 .spawn_bundle(SpriteBundle {
                     sprite: Sprite {
                         color: Color::rgb(0.75, 0.75, 0.55),
-                        custom_size: Some(Vec2::splat(2.0)),
+                        custom_size: Some(atom_size),
 
                         ..Default::default()
                     },
                     transform,
                     ..Default::default()
                 })
-                // .insert(MainCharacter { id: 1 })
+                .insert(Atom)
                 .id();
+
+            main_agent.body[k].entity = Some(child_id);
+            main_agent.body[k].is_used = true;
 
             commands.entity(core_id).push_children(&[child_id]);
         }
     });
-    game.agents.insert(1, random_agent);
+    game.agents.insert(1, main_agent);
 
     //////////////////// main character ////////////////////////////////////////////////////////////////////////
 
     ////////////////////////////// spawn all npcs ////////////////////////////////////////////////
     let mut rng = rand::thread_rng();
-    for (id, agent) in game.agents.iter() {
+    for (id, mut agent) in game.agents.iter_mut() {
+        if id == &1 {
+            continue;
+        }
         let creature_pos = agent.position;
         // println!("creature pos: {:?}", creature_pos);
 
         let color = Color::rgb(rng.gen::<f32>(), rng.gen::<f32>(), rng.gen::<f32>());
 
-        let mass_mult = agent.mass * 1000.0;
-
-        let creature_size = Vec2::splat(mass_mult * 0.001);
+        let creature_size = Vec2::splat(MASS_MULT * agent.mass * 0.001);
 
         let mut agent_trans = Transform::from_translation(creature_pos.extend(0.09));
 
-        agent_trans.rotation = Quat::from_rotation_z(agent.look_at_angle);
+        // agent_trans.rotation = Quat::from_rotation_z(agent.look_at_angle);
 
         let npc_entity = commands
             .spawn_bundle(SpriteBundle {
@@ -342,15 +371,30 @@ fn setup(
             .insert(AgentId { kdtree_hash: *id })
             .id();
 
-        nodes.iter().for_each(|pos| {
-            if pos.length() < 0.49 {
-                let mut transform = Transform::from_translation(pos.extend(4.0) * mass_mult);
+        let atom_size = Vec2::splat(0.05 * agent.mass * MASS_MULT);
+
+        agent.body = nodes
+            .iter()
+            .enumerate()
+            .map(|(k, node)| Body {
+                atom_pos: *node * agent.mass,
+                atom_size: atom_size.length(),
+                acceleration: Vec2::new(0.0, 0.0),
+                entity: None,
+                is_used: false,
+            })
+            .collect::<Vec<_>>();
+        // main_agent.mass = 0.05;
+
+        nodes.iter().enumerate().for_each(|(k, pos)| {
+            if pos.length() < 0.49 * MASS_MULT {
+                let mut transform = Transform::from_translation(pos.extend(4.0) * agent.mass);
 
                 let npc_child_id = commands
                     .spawn_bundle(SpriteBundle {
                         sprite: Sprite {
                             color,
-                            custom_size: Some(Vec2::splat(0.05 * mass_mult)),
+                            custom_size: Some(atom_size),
 
                             ..Default::default()
                         },
@@ -358,7 +402,11 @@ fn setup(
                         ..Default::default()
                     })
                     // .insert(MainCharacter { id: 1 })
+                    .insert(Atom)
                     .id();
+
+                agent.body[k].entity = Some(npc_child_id);
+                agent.body[k].is_used = true;
 
                 commands.entity(npc_entity).push_children(&[npc_child_id]);
             }
@@ -442,6 +490,48 @@ pub fn main_character_inputs(
 
 #[derive(Component)]
 pub struct DebugQuad;
+
+pub fn agent_movement_debug(
+    mut game: ResMut<Game>,
+    mut query: Query<(&mut Transform, &MainCharacter), Without<Cam>>,
+
+    mut cam_query: Query<&mut Transform, With<Cam>>,
+    // move_params: Res<MovementParams>,
+) {
+    for (mut transform, main_char) in &mut query.iter_mut() {
+        let mut agent = game.agents.get_mut(&main_char.id).unwrap();
+        let forward = Vec2::new(0.0, 1.0) * 0.5;
+        let left = Vec2::new(-1.0, 0.0) * 0.5;
+        let mut acc = Vec2::ZERO;
+
+        match agent.acc {
+            Acceleration::Forward => {
+                acc = forward;
+            }
+            Acceleration::Backward => {
+                acc = -forward;
+            }
+            Acceleration::None => {}
+        }
+
+        match agent.turning {
+            Turning::Left(mut delta_angle) => {
+                acc = acc + left;
+            }
+            Turning::Right(mut delta_angle) => {
+                acc = acc - left;
+            }
+            Turning::None => {}
+        }
+
+        agent.position += acc;
+        transform.translation = agent.position.extend(2.2);
+
+        let mut cam_transform = cam_query.single_mut();
+        cam_transform.translation.x = agent.position.x;
+        cam_transform.translation.y = agent.position.y;
+    }
+}
 
 pub fn agent_movement(
     // mut commands: Commands,

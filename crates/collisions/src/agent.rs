@@ -10,11 +10,16 @@ use std::collections::HashMap;
 use strum::IntoEnumIterator;
 use strum_macros::EnumIter;
 
+#[derive(Component, Clone, Debug)]
+pub struct Atom;
+
 #[derive(Clone, Debug)]
 pub struct Body {
     pub atom_pos: Vec2,
     pub atom_size: f32,
     pub acceleration: Vec2,
+    pub entity: Option<Entity>,
+    pub is_used: bool,
     // pub item_anchors: Vec2,
 }
 
@@ -72,6 +77,8 @@ impl Agent {
         let sight_range: f32;
         let memory_time: f32;
 
+        let eyes = 3.0;
+
         match stage {
             bottom @ GameStage::Bottom => {
                 position = Vec2::new(
@@ -80,8 +87,8 @@ impl Agent {
                 ) * POS_MULT;
                 mass = rng.gen_range(0.003..BOTTOM_STAGE_LIMIT);
                 hp = rng.gen_range(0.0..BOTTOM_STAGE_LIMIT);
-                hearing_range = rng.gen_range(0.0..BOTTOM_STAGE_LIMIT);
-                sight_range = rng.gen_range(0.0..BOTTOM_STAGE_LIMIT);
+                hearing_range = MASS_MULT * mass * eyes;
+                sight_range = MASS_MULT * mass * eyes;
                 race = Race::random_race(&bottom);
             }
             mid @ GameStage::Mid => {
@@ -91,8 +98,8 @@ impl Agent {
                 ) * POS_MULT;
                 mass = rng.gen_range(BOTTOM_STAGE_LIMIT..MID_STAGE_LIMIT);
                 hp = rng.gen_range(BOTTOM_STAGE_LIMIT..MID_STAGE_LIMIT);
-                hearing_range = rng.gen_range(BOTTOM_STAGE_LIMIT..MID_STAGE_LIMIT);
-                sight_range = rng.gen_range(BOTTOM_STAGE_LIMIT..MID_STAGE_LIMIT);
+                hearing_range = MASS_MULT * mass * eyes;
+                sight_range = MASS_MULT * mass * eyes;
                 race = Race::random_race(&mid);
                 // social_attributes = race.gen_socials();
             }
@@ -103,8 +110,8 @@ impl Agent {
                 ) * POS_MULT;
                 mass = rng.gen_range(MID_STAGE_LIMIT..TOP_STAGE_LIMIT);
                 hp = rng.gen_range(MID_STAGE_LIMIT..TOP_STAGE_LIMIT);
-                hearing_range = rng.gen_range(MID_STAGE_LIMIT..TOP_STAGE_LIMIT);
-                sight_range = rng.gen_range(MID_STAGE_LIMIT..TOP_STAGE_LIMIT);
+                hearing_range = MASS_MULT * mass * eyes;
+                sight_range = MASS_MULT * mass * eyes;
                 race = Race::random_race(&top);
                 // social_attributes = race.gen_socials();
             }
@@ -583,7 +590,7 @@ impl Default for Sensors {
     fn default() -> Self {
         Self {
             hearing_range: 1.0,
-            sight_range: 1.0,
+            sight_range: 100.0,
             agent_sight: HashMap::new(),
             item_sight: HashMap::new(),
             food_sight: HashMap::new(),
@@ -840,7 +847,7 @@ impl Race {
     }
 }
 
-#[derive(Clone, Debug, Component)]
+#[derive(Clone, Debug, Component, PartialEq)]
 pub struct AgentId {
     pub kdtree_hash: u32,
     // pub maybe_AgentId: Option<AgentId>,

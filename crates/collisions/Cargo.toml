@@ -1,0 +1,32 @@
+[package]
+name = "rise_above_spawner"
+version = "0.1.0"
+edition = "2021"
+authors = ["Eliot Bolduc"]
+description = "Spawns creatures, food and items"
+license = "GNU GPLv3"
+readme = "README.md"
+categories = [
+    "game-development"
+]
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
+
+
+[dependencies]
+bevy = { version = "0.6.1", default-features = true, features = [  "render", "x11", "filesystem_watcher"] }
+bytemuck = "1.7"
+bevy-inspector-egui = "0.8"
+
+serde_json = "1.0.59"
+serde = { version = "1", features = ["derive"] }
+rfd = "0.5.1"
+
+rand = "0.8.5"
+strum_macros = "0.24.0"
+strum = "0.24.0"
+kdtree = "0.6.0"
+
+
+

@@ -4,12 +4,25 @@ mod cam;
 use cam::*;
 
 pub mod agent;
+pub mod encoding;
 pub use agent::*;
+pub use encoding::*;
 
 pub mod util;
 pub use util::*;
 
+pub mod inputs;
+pub use inputs::*;
+
+mod libaaa;
+pub use libaaa::*;
+
 use rand::prelude::*;
+
+use std::fs::File;
+use std::io::Read;
+use std::io::Write;
+use std::path::PathBuf;
 
 pub const LEVEL_WIDTH: f32 = 10000.0;
 pub const LEVEL_HEIGHT: f32 = 20000.0;
@@ -99,17 +112,17 @@ impl Default for MovementParams {
 impl MovementParams {
     pub fn stage1() -> Self {
         Self {
-            friction1: 0.9,
-            friction2: 0.9,
+            friction1: 0.2,
+            friction2: 0.2,
             turning_speed_dependence: 0.03,
             backwards_mult: 0.3,
             boost_mult: 5.0,
             rest_turn_speed: 0.02,
             max_turn_speed: 0.05,
-            throttle: 50.0,
-            time_between_boosts: 2.0,
-            downcurrent: 1.0,
-            bottom_bounce: 2.0,
+            throttle: 150.0,
+            time_between_boosts: 1.0,
+            downcurrent: 0.5,
+            bottom_bounce: 10.0,
         }
     }
 
@@ -158,11 +171,15 @@ fn main() {
         .add_plugins(DefaultPlugins)
         .add_plugin(CamPlugin)
         .add_plugin(InspectorPlugin::<MovementParams>::new())
-        .insert_resource(MovementParams::stage3())
+        .insert_resource(Cursor::default())
+        .insert_resource(MovementParams::stage1())
         .insert_resource(Game::new())
         .add_startup_system(setup)
         .add_system(main_character_inputs)
         .add_system(agent_movement)
+        .add_system(record_mouse_events_system)
+        // .add_system(load_character)
+        // .add_system(load_character_auto)
         .run();
 }
 
@@ -215,7 +232,27 @@ fn setup(mut commands: Commands, mut game: ResMut<Game>, time: Res<Time>) {
         ..Default::default()
     });
 
-    // main character
+    let mut path = std::env::current_dir().unwrap().join("notme.cha");
+
+    // path = path;
+
+    let mut file = std::fs::File::open(path).unwrap();
+
+    let mut contents = String::new();
+    file.read_to_string(&mut contents).unwrap();
+
+    println!("loaded: {}", contents);
+
+    let loaded_character: CharacterSaveFormat = serde_json::from_str(&contents).unwrap();
+    let nodes = loaded_character
+        .data
+        .iter()
+        .map(|node| node.pos)
+        .collect::<Vec<_>>();
+
+    // let character: MarkerInstanceMatData = loaded_character.clone().into();
+
+    //////////////////// main character////////////////////////////////////////////////////////////////////////
     let mut random_agent = Agent::gen_random(&GameStage::Bottom, 1); // the 1 is for the main character's id
     random_agent.position = Vec2::new(LEVEL_WIDTH / 2.0, 20.0);
     random_agent.last_position = random_agent.position;
@@ -224,42 +261,101 @@ fn setup(mut commands: Commands, mut game: ResMut<Game>, time: Res<Time>) {
     let mut transform =
         Transform::from_translation(Vec3::new(LEVEL_WIDTH / 2.0, 0.0, MAIN_CHARA_Z));
 
-    transform.rotation = Quat::from_rotation_z(random_agent.look_at_angle);
-    game.agents.insert(1, random_agent);
+    // transform.rotation =
+    //     Quat::from_rotation_z(random_agent.look_at_angle + std::f32::consts::PI / 1.0);
 
-    commands
+    let core_id = commands
         .spawn_bundle(SpriteBundle {
             sprite: Sprite {
                 color: Color::rgb(0.75, 0.25, 0.55),
-                custom_size: Some(main_creature_size),
+                custom_size: Some(main_creature_size * 0.3),
 
                 ..Default::default()
             },
             transform,
             ..Default::default()
         })
-        .insert(MainCharacter { id: 1 });
+        .insert(MainCharacter { id: 1 })
+        .id();
 
-    // spawn all agents
+    nodes.iter().for_each(|pos| {
+        if pos.length() < 0.49 {
+            let transform = Transform::from_translation(pos.extend(4.0) * 50.0);
+
+            let child_id = commands
+                .spawn_bundle(SpriteBundle {
+                    sprite: Sprite {
+                        color: Color::rgb(0.75, 0.75, 0.55),
+                        custom_size: Some(Vec2::splat(2.0)),
+
+                        ..Default::default()
+                    },
+                    transform,
+                    ..Default::default()
+                })
+                // .insert(MainCharacter { id: 1 })
+                .id();
+
+            commands.entity(core_id).push_children(&[child_id]);
+        }
+    });
+    game.agents.insert(1, random_agent);
+
+    //////////////////// main character ////////////////////////////////////////////////////////////////////////
+
+    ////////////////////////////// spawn all npcs ////////////////////////////////////////////////
     let mut rng = rand::thread_rng();
     for (id, agent) in game.agents.iter() {
-        let creature_size = Vec2::splat(agent.mass * 500.0);
         let creature_pos = agent.position;
         // println!("creature pos: {:?}", creature_pos);
 
-        commands
+        let color = Color::rgb(rng.gen::<f32>(), rng.gen::<f32>(), rng.gen::<f32>());
+
+        let mass_mult = agent.mass * 1000.0;
+
+        let creature_size = Vec2::splat(mass_mult * 0.001);
+
+        let mut agent_trans = Transform::from_translation(creature_pos.extend(0.09));
+
+        agent_trans.rotation = Quat::from_rotation_z(agent.look_at_angle);
+
+        let npc_entity = commands
             .spawn_bundle(SpriteBundle {
                 sprite: Sprite {
-                    color: Color::rgb(rng.gen::<f32>(), rng.gen::<f32>(), rng.gen::<f32>()),
+                    color,
                     custom_size: Some(creature_size),
 
                     ..Default::default()
                 },
-                transform: Transform::from_translation(creature_pos.extend(0.09)),
+                transform: agent_trans,
                 ..Default::default()
             })
-            .insert(AgentId { kdtree_hash: *id });
+            .insert(AgentId { kdtree_hash: *id })
+            .id();
+
+        nodes.iter().for_each(|pos| {
+            if pos.length() < 0.49 {
+                let mut transform = Transform::from_translation(pos.extend(4.0) * mass_mult);
+
+                let npc_child_id = commands
+                    .spawn_bundle(SpriteBundle {
+                        sprite: Sprite {
+                            color,
+                            custom_size: Some(Vec2::splat(0.05 * mass_mult)),
+
+                            ..Default::default()
+                        },
+                        transform,
+                        ..Default::default()
+                    })
+                    // .insert(MainCharacter { id: 1 })
+                    .id();
+
+                commands.entity(npc_entity).push_children(&[npc_child_id]);
+            }
+        });
     }
+    ////////////////////////////// spawn all npcs ////////////////////////////////////////////////
 }
 
 pub fn main_character_inputs(
@@ -271,33 +367,67 @@ pub fn main_character_inputs(
 
     time: Res<Time>,
     move_params: Res<MovementParams>,
+    cursor: Res<Cursor>,
 ) {
     let main_char = query.single_mut();
     let mut agent = game.agents.get_mut(&main_char.id).unwrap();
 
     if keyboard_input.pressed(KeyCode::S) {
         agent.acc = Acceleration::Backward;
+        agent.main_char_target_pos = None;
     } else if keyboard_input.pressed(KeyCode::W) {
         agent.acc = Acceleration::Forward;
+        agent.main_char_target_pos = None;
     } else {
         agent.acc = Acceleration::None;
     }
 
     if keyboard_input.pressed(KeyCode::A) && !keyboard_input.pressed(KeyCode::D) {
-        agent.turning = Turning::Left;
+        agent.turning = Turning::Left(1.0);
+        agent.main_char_target_pos = None;
     } else if keyboard_input.pressed(KeyCode::D) && !keyboard_input.pressed(KeyCode::A) {
-        agent.turning = Turning::Right;
+        agent.turning = Turning::Right(1.0);
+        agent.main_char_target_pos = None;
     } else {
         agent.turning = Turning::None;
     }
 
-    if (mouse_click.just_pressed(MouseButton::Left) || keyboard_input.pressed(KeyCode::Space))
+    if (mouse_click.just_pressed(MouseButton::Right) || keyboard_input.pressed(KeyCode::Space))
         && time.seconds_since_startup() as f32 - agent.boost_time > move_params.time_between_boosts
         && agent.energy_shots > 1.0
     {
         agent.boost = true;
         agent.boost_time = time.seconds_since_startup() as f32;
         agent.energy_shots -= 1.0;
+        agent.main_char_target_pos = None;
+    }
+
+    if mouse_click.pressed(MouseButton::Left) {
+        agent.main_char_target_pos = Some(cursor.position);
+    }
+
+    if let Some(pos) = agent.main_char_target_pos {
+        let target_dir = pos - agent.position;
+        if target_dir != Vec2::ZERO {
+            // let target_angle = target_dir.y.atan2(target_dir.x);
+            let look_at_dir = agent.compute_look_at_dir();
+            let look_at_90 = Vec2::new(-look_at_dir.y, look_at_dir.x);
+
+            let dot_dirs = look_at_90.dot(target_dir.normalize());
+
+            // println!("look_at_dir: {:?}", dot_dirs);
+
+            // let delta_angle = target_angle - agent.look_at_angle - std::f32::consts::PI / 2.0;
+
+            if dot_dirs < 0.0 {
+                agent.turning = Turning::Right(dot_dirs.abs());
+            } else {
+                agent.turning = Turning::Left(dot_dirs.abs());
+            }
+
+            agent.acc = Acceleration::Forward;
+            // println!("target angle: {:?}", dot_dirs);
+        }
     }
 }
 
@@ -370,17 +500,29 @@ pub fn agent_movement(
             acc = acc * (1.0 + boost_value * boost_mult);
         }
 
-        let (left, right) = agent.compute_left_and_right_dir();
+        // let (left, right) = agent.compute_left_and_right_dir();
 
         // apply turning
 
+        let soft_angular = 0.5;
+
         match agent.turning {
-            Turning::Left => {
+            Turning::Left(mut delta_angle) => {
+                if delta_angle < soft_angular {
+                    delta_angle = delta_angle / soft_angular;
+                } else {
+                    delta_angle = 1.0;
+                }
                 let speed_turn = agent.speed * turning_speed_dependence * (1.0 - boost_value);
-                turn_angle =
-                    rest_turn_speed + speed_turn.clamp(0.0, max_turn_speed - rest_turn_speed);
+                turn_angle = delta_angle
+                    * (rest_turn_speed + speed_turn.clamp(0.0, max_turn_speed - rest_turn_speed));
             }
-            Turning::Right => {
+            Turning::Right(mut delta_angle) => {
+                if delta_angle < soft_angular {
+                    delta_angle = delta_angle / soft_angular;
+                } else {
+                    delta_angle = 1.0;
+                }
                 let speed_turn = agent.speed * turning_speed_dependence * (1.0 - boost_value);
                 turn_angle =
                     -rest_turn_speed - speed_turn.clamp(0.0, max_turn_speed - rest_turn_speed);

@@ -48,7 +48,7 @@ fn main() {
         .add_system(update_character.after("inspector"))
         .add_system(character_inspector_update.label("inspector"))
         .add_system(save_character)
-        // .add_system(load_character)
+        .add_system(load_character)
         .add_system(delete_point)
         .run();
 }

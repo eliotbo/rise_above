@@ -13,7 +13,7 @@ use kdtree::KdTree;
 use std::collections::HashMap;
 
 use crate::agent::*;
-use crate::libaaa::*;
+use crate::*;
 
 // use crate::{ATOM_MULT, MASS_MULT};
 // use crate::vec2::*;
@@ -214,46 +214,32 @@ impl Game {
             }
         });
 
-        // // guardians have ids between 20 and 40
-        // (0..10).for_each(|k| {
-        //     //
+        // guardians have ids between 20 and 40
+        (0..5).for_each(|k| {
+            //
 
-        //     // let id: u32 = rng.gen();
-        //     let x_pos = LEVEL_WIDTH * k as f32 / 10.0;
-        //     let pos = Vec2::new(x_pos, LEVEL_HEIGHT - 2000.0);
-        //     // avoid accidentally duplicating the main character's id
+            // let id: u32 = rng.gen();
+            let x_pos = LEVEL_WIDTH / 2.0 * k as f32 / 10.0 * 0.85;
+            let pos = Vec2::new(x_pos, LEVEL_HEIGHT - 2000.0);
+            // avoid accidentally duplicating the main character's id
 
-        //     let random_agent = Agent::gen_guardian(pos, k + 20);
+            let random_agent = Agent::gen_guardian(pos, k + 20);
 
-        //     agents.insert(k + 20, random_agent);
-        // });
+            agents.insert(k + 20, random_agent);
+        });
 
-        // // guardians have ids between 20 and 40
-        // (0..5).for_each(|k| {
-        //     //
+        (5..10).for_each(|k| {
+            //
 
-        //     // let id: u32 = rng.gen();
-        //     let x_pos = LEVEL_WIDTH / 2.0 * k as f32 / 10.0 * 0.85;
-        //     let pos = Vec2::new(x_pos, LEVEL_HEIGHT - 2000.0);
-        //     // avoid accidentally duplicating the main character's id
+            // let id: u32 = rng.gen();
+            let x_pos = LEVEL_WIDTH - LEVEL_WIDTH * (k - 5) as f32 / 10.0 * 0.85;
+            let pos = Vec2::new(x_pos, LEVEL_HEIGHT - 2000.0);
+            // avoid accidentally duplicating the main character's id
 
-        //     let random_agent = Agent::gen_guardian(pos, k + 20);
+            let random_agent = Agent::gen_guardian(pos, k + 20);
 
-        //     agents.insert(k + 20, random_agent);
-        // });
-
-        // (5..10).for_each(|k| {
-        //     //
-
-        //     // let id: u32 = rng.gen();
-        //     let x_pos = LEVEL_WIDTH - LEVEL_WIDTH * (k - 5) as f32 / 10.0 * 0.85;
-        //     let pos = Vec2::new(x_pos, LEVEL_HEIGHT - 2000.0);
-        //     // avoid accidentally duplicating the main character's id
-
-        //     let random_agent = Agent::gen_guardian(pos, k + 20);
-
-        //     agents.insert(k + 20, random_agent);
-        // });
+            agents.insert(k + 20, random_agent);
+        });
 
         (0..10).for_each(|k| {
             //
@@ -682,18 +668,6 @@ pub fn compute_acc_food(mut game: ResMut<Game>, kdtrees: Res<KdTrees>) {
         })
         .collect();
 
-    // let mut food_vacuum_pos_and_mass: Vec<PosMass> = game
-    //     // .items
-    //     .iter()
-    //     .filter(|(_, item)| item.item_type == ItemType::FoodVacuum)
-    //     .map(|(_, food_vacuum)| PosMass {
-    //         position: food_vacuum.position,
-    //         mass: food_vacuum.mass,
-    //     })
-    //     .collect();
-
-    // pos_mass.append(&mut food_vacuum_pos_and_mass);
-
     let food_kd_tree = &kdtrees.food_kdtree;
 
     pos_mass.iter().for_each(|pos_mass| {
@@ -718,28 +692,6 @@ pub fn compute_acc_food(mut game: ResMut<Game>, kdtrees: Res<KdTrees>) {
 pub fn eat_food(mut game: ResMut<Game>, kdtrees: Res<KdTrees>) {
     let mut foods_to_remove: Vec<u32> = Vec::new();
 
-    // game.agents.iter_mut().for_each(|(_, mut agent)| {
-    //     //
-    //     // TODO: tweak this
-    //     let agent_food_radius = agent.mass * 0.5;
-    //     if let Ok(dist_id_array) = kdtrees.food_kdtree.within(
-    //         &[agent.position.x, agent.position.y],
-    //         agent_food_radius,
-    //         &squared_euclidean,
-    //     ) {
-    //         //
-    //         dist_id_array.iter().for_each(|(_dist, id)| {
-    //             foods_to_remove.push(**id);
-    //             if let Some(food) = game.foods.get(*id) {
-    //                 // TODO: make food disappear
-    //                 agent.consume_food(food);
-    //             } else {
-    //                 println!("food not found");
-    //             }
-    //         });
-    //     }
-    // });
-
     foods_to_remove.iter().for_each(|id| {
         game.foods.remove(id);
 
@@ -747,110 +699,12 @@ pub fn eat_food(mut game: ResMut<Game>, kdtrees: Res<KdTrees>) {
     });
 }
 
-use std::fs::File;
-use std::io::Read;
-use std::io::Write;
-use std::path::PathBuf;
-
-pub fn open_file_dialog(save_name: &str, folder: &str, extension: &str) -> Option<PathBuf> {
-    let mut k: usize = 0;
-
-    let mut default_path = std::env::current_dir().unwrap();
-    default_path.push("saved");
-    default_path.push(folder.to_string());
-    let mut default_name: String;
-
-    loop {
-        default_name = save_name.to_string();
-        default_name.push_str(&(k.to_string()));
-        default_name.push_str(extension);
-
-        default_path.push(&default_name);
-
-        if !default_path.exists() {
-            break;
-        }
-        default_path.pop();
-
-        k += 1;
-    }
-
-    let res = rfd::FileDialog::new()
-        .set_file_name(&default_name)
-        .set_directory(&default_path)
-        .save_file();
-    println!("The user choose: {:#?}", &res);
-
-    return res;
-}
-
 pub fn load_character_auto(
     keyboard: Res<Input<KeyCode>>,
     mut query: Query<&mut MarkerInstanceMatData>,
 ) {
     if keyboard.pressed(KeyCode::LControl) && keyboard.just_pressed(KeyCode::L) {
-        let mut path = std::env::current_dir().unwrap();
-        // default_path.push("saved");
-        // default_path.push("groups");
-
-        // cancel loading if user cancelled the file dialog
-        // let mut path: std::path::PathBuf;
-        // if let Some(chosen_path) = res.clone() {
-        //     let path_some = chosen_path.get(0);
-        //     if let Some(path_local) = path_some {
-        //         path = path_local.clone();
-        //     } else {
-        //         return ();
-        //     }
-        // } else {
-        //     return ();
-        // }
-        path = path.join("bah.cha");
-
-        let mut file = std::fs::File::open(path).unwrap();
-
-        let mut contents = String::new();
-        file.read_to_string(&mut contents).unwrap();
-        println!("loaded: {}", contents);
-
-        let loaded_character: CharacterSaveFormat = serde_json::from_str(&contents).unwrap();
-
-        for mut character in query.iter_mut() {
-            let character2 = character.as_mut();
-            *character2 = loaded_character.clone().into();
-        }
-    }
-}
-
-pub fn load_character(keyboard: Res<Input<KeyCode>>, mut query: Query<&mut MarkerInstanceMatData>) {
-    if keyboard.pressed(KeyCode::LControl) && keyboard.just_pressed(KeyCode::L) {
-        let default_path = std::env::current_dir().unwrap();
-        // default_path.push("saved");
-        // default_path.push("groups");
-
-        let res = rfd::FileDialog::new()
-            .add_filter("text", &["cha"])
-            .set_directory(&default_path)
-            .pick_files();
-
-        // cancel loading if user cancelled the file dialog
-        let path: std::path::PathBuf;
-        if let Some(chosen_path) = res.clone() {
-            let path_some = chosen_path.get(0);
-            if let Some(path_local) = path_some {
-                path = path_local.clone();
-            } else {
-                return ();
-            }
-        } else {
-            return ();
-        }
-
-        let mut file = std::fs::File::open(path).unwrap();
-
-        let mut contents = String::new();
-        file.read_to_string(&mut contents).unwrap();
-        println!("loaded: {}", contents);
+        let contents = include_str!("bah.cha");
 
         let loaded_character: CharacterSaveFormat = serde_json::from_str(&contents).unwrap();
 

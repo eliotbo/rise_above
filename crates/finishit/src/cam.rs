@@ -70,16 +70,16 @@ pub fn camera_movevement_system(
 
         // transform.translation += velocity;
 
-        for event in ev_scroll.iter() {
-            if event.y > 0.0 {
-                transform.scale.x *= 1.0 - 0.1;
-                transform.scale.y *= 1.0 - 0.1;
-            } else {
-                transform.scale.x *= 1.0 + 0.1;
-                transform.scale.y *= 1.0 + 0.1;
-            }
-            transform.scale.x = transform.scale.x.clamp(0.1, 100.0);
-            transform.scale.y = transform.scale.y.clamp(0.1, 100.0);
-        }
+        // for event in ev_scroll.iter() {
+        //     if event.y > 0.0 {
+        //         transform.scale.x *= 1.0 - 0.1;
+        //         transform.scale.y *= 1.0 - 0.1;
+        //     } else {
+        //         transform.scale.x *= 1.0 + 0.1;
+        //         transform.scale.y *= 1.0 + 0.1;
+        //     }
+        //     transform.scale.x = transform.scale.x.clamp(0.1, 100.0);
+        //     transform.scale.y = transform.scale.y.clamp(0.1, 100.0);
+        // }
     }
 }

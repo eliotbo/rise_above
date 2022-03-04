@@ -190,7 +190,8 @@ impl Agent {
 
         position = pos;
         let guardian_pos = pos;
-        mass = rng.gen_range(0.11..0.2);
+        // Guardian mass range
+        mass = rng.gen_range(0.11..0.15);
 
         // hearing_range = MASS_MULT * mass * eyes;
 

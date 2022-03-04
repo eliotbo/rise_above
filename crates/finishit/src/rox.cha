@@ -1,0 +1,354 @@
+{
+  "group_position": [
+    0,
+    0,
+    0
+  ],
+  "scale": 4294967295,
+  "color": [
+    2147483647,
+    2147483647,
+    2147483647,
+    2147483647
+  ],
+  "data": [
+    {
+      "pos": [
+        -0.053985596,
+        -0.17779541
+      ],
+      "max_size": 0.796875,
+      "frequency": 0.5,
+      "noise": 0.0,
+      "min_size": 0.6953125,
+      "morph": 0.5,
+      "core_size": 0.625,
+      "is_joint": false
+    },
+    {
+      "pos": [
+        0.21133423,
+        0.13693237
+      ],
+      "max_size": 0.796875,
+      "frequency": 0.5,
+      "noise": 0.0,
+      "min_size": 0.6953125,
+      "morph": 0.5,
+      "core_size": 0.625,
+      "is_joint": false
+    },
+    {
+      "pos": [
+        1.4999695,
+        1.4999695
+      ],
+      "max_size": 0.796875,
+      "frequency": 0.5,
+      "noise": 0.0,
+      "min_size": 0.6953125,
+      "morph": 0.5,
+      "core_size": 0.625,
+      "is_joint": false
+    },
+    {
+      "pos": [
+        0.098480225,
+        0.033966064
+      ],
+      "max_size": 0.796875,
+      "frequency": 0.5,
+      "noise": 0.0,
+      "min_size": 0.6953125,
+      "morph": 0.5,
+      "core_size": 0.625,
+      "is_joint": false
+    },
+    {
+      "pos": [
+        1.4999695,
+        1.4999695
+      ],
+      "max_size": 0.796875,
+      "frequency": 0.5,
+      "noise": 0.0,
+      "min_size": 0.6953125,
+      "morph": 0.5,
+      "core_size": 0.625,
+      "is_joint": false
+    },
+    {
+      "pos": [
+        1.4999695,
+        1.4999695
+      ],
+      "max_size": 0.796875,
+      "frequency": 0.5,
+      "noise": 0.0,
+      "min_size": 0.6953125,
+      "morph": 0.5,
+      "core_size": 0.625,
+      "is_joint": false
+    },
+    {
+      "pos": [
+        0.18695068,
+        -0.1065979
+      ],
+      "max_size": 0.796875,
+      "frequency": 0.5,
+      "noise": 0.0,
+      "min_size": 0.6953125,
+      "morph": 0.5,
+      "core_size": 0.625,
+      "is_joint": false
+    },
+    {
+      "pos": [
+        1.4999695,
+        1.4999695
+      ],
+      "max_size": 0.796875,
+      "frequency": 0.5,
+      "noise": 0.0,
+      "min_size": 0.6953125,
+      "morph": 0.5,
+      "core_size": 0.625,
+      "is_joint": false
+    },
+    {
+      "pos": [
+        0.043914795,
+        0.19592285
+      ],
+      "max_size": 0.796875,
+      "frequency": 0.5,
+      "noise": 0.0,
+      "min_size": 0.6953125,
+      "morph": 0.5,
+      "core_size": 0.625,
+      "is_joint": false
+    },
+    {
+      "pos": [
+        0.09820557,
+        -0.029815674
+      ],
+      "max_size": 0.796875,
+      "frequency": 0.5,
+      "noise": 0.0,
+      "min_size": 0.6953125,
+      "morph": 0.5,
+      "core_size": 0.625,
+      "is_joint": false
+    },
+    {
+      "pos": [
+        1.4999695,
+        1.4999695
+      ],
+      "max_size": 0.3984375,
+      "frequency": 0.375,
+      "noise": 1.0,
+      "min_size": 0.296875,
+      "morph": 0.125,
+      "core_size": 0.0,
+      "is_joint": true
+    },
+    {
+      "pos": [
+        1.4999695,
+        1.4999695
+      ],
+      "max_size": 0.3984375,
+      "frequency": 0.375,
+      "noise": 1.0,
+      "min_size": 0.296875,
+      "morph": 0.125,
+      "core_size": 0.0,
+      "is_joint": true
+    },
+    {
+      "pos": [
+        1.4999695,
+        1.4999695
+      ],
+      "max_size": 0.3984375,
+      "frequency": 0.375,
+      "noise": 1.0,
+      "min_size": 0.296875,
+      "morph": 0.125,
+      "core_size": 0.0,
+      "is_joint": true
+    },
+    {
+      "pos": [
+        -0.5,
+        -0.5
+      ],
+      "max_size": 0.0,
+      "frequency": 0.0,
+      "noise": 0.0,
+      "min_size": 0.0,
+      "morph": 0.0,
+      "core_size": 0.0,
+      "is_joint": false
+    },
+    {
+      "pos": [
+        0.0932312,
+        0.088531494
+      ],
+      "max_size": 0.796875,
+      "frequency": 0.5,
+      "noise": 0.0,
+      "min_size": 0.6953125,
+      "morph": 0.5,
+      "core_size": 0.625,
+      "is_joint": false
+    },
+    {
+      "pos": [
+        0.037750244,
+        0.02911377
+      ],
+      "max_size": 0.796875,
+      "frequency": 0.5,
+      "noise": 0.0,
+      "min_size": 0.6953125,
+      "morph": 0.5,
+      "core_size": 0.625,
+      "is_joint": false
+    },
+    {
+      "pos": [
+        0.06451416,
+        -0.230896
+      ],
+      "max_size": 0.796875,
+      "frequency": 0.5,
+      "noise": 0.0,
+      "min_size": 0.6953125,
+      "morph": 0.5,
+      "core_size": 0.625,
+      "is_joint": false
+    },
+    {
+      "pos": [
+        1.4999695,
+        1.4999695
+      ],
+      "max_size": 0.796875,
+      "frequency": 0.5,
+      "noise": 0.0,
+      "min_size": 0.6953125,
+      "morph": 0.5,
+      "core_size": 0.625,
+      "is_joint": false
+    },
+    {
+      "pos": [
+        1.4999695,
+        1.4999695
+      ],
+      "max_size": 0.796875,
+      "frequency": 0.5,
+      "noise": 0.0,
+      "min_size": 0.6953125,
+      "morph": 0.5,
+      "core_size": 0.625,
+      "is_joint": false
+    },
+    {
+      "pos": [
+        1.4999695,
+        1.4999695
+      ],
+      "max_size": 0.796875,
+      "frequency": 0.5,
+      "noise": 0.0,
+      "min_size": 0.6953125,
+      "morph": 0.5,
+      "core_size": 0.625,
+      "is_joint": false
+    },
+    {
+      "pos": [
+        -0.05657959,
+        -0.049926758
+      ],
+      "max_size": 0.796875,
+      "frequency": 0.5,
+      "noise": 0.0,
+      "min_size": 0.6953125,
+      "morph": 0.5,
+      "core_size": 0.625,
+      "is_joint": false
+    },
+    {
+      "pos": [
+        1.4999695,
+        1.4999695
+      ],
+      "max_size": 0.796875,
+      "frequency": 0.5,
+      "noise": 0.0,
+      "min_size": 0.6953125,
+      "morph": 0.5,
+      "core_size": 0.625,
+      "is_joint": false
+    },
+    {
+      "pos": [
+        0.17514038,
+        -0.2998047
+      ],
+      "max_size": 0.796875,
+      "frequency": 0.5,
+      "noise": 0.0,
+      "min_size": 0.6953125,
+      "morph": 0.5,
+      "core_size": 0.625,
+      "is_joint": false
+    },
+    {
+      "pos": [
+        0.037139893,
+        -0.21731567
+      ],
+      "max_size": 0.796875,
+      "frequency": 0.5,
+      "noise": 0.0,
+      "min_size": 0.6953125,
+      "morph": 0.5,
+      "core_size": 0.625,
+      "is_joint": false
+    },
+    {
+      "pos": [
+        -0.1887207,
+        -0.12771606
+      ],
+      "max_size": 0.796875,
+      "frequency": 0.5,
+      "noise": 0.0,
+      "min_size": 0.6953125,
+      "morph": 0.5,
+      "core_size": 0.625,
+      "is_joint": false
+    },
+    {
+      "pos": [
+        -0.15579224,
+        -0.2078247
+      ],
+      "max_size": 0.796875,
+      "frequency": 0.5,
+      "noise": 0.0,
+      "min_size": 0.6953125,
+      "morph": 0.5,
+      "core_size": 0.625,
+      "is_joint": false
+    }
+  ]
+}

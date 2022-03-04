@@ -20,7 +20,7 @@ use crate::*;
 
 // use bevy::prelude::*;
 
-pub const STARTING_MASS: f32 = 0.04;
+pub const STARTING_MASS: f32 = 0.08;
 
 pub const NUM_AGENTS: usize = 100;
 pub const NUM_ITEMS: usize = 10;
@@ -502,6 +502,38 @@ pub struct MainCharacter {
 
 #[derive(Component)]
 pub struct DebugQuad;
+
+pub fn load_creatures() -> HashMap<String, CharacterSaveFormat> {
+    let mut h = HashMap::new();
+
+    let stratolopusarealus: CharacterSaveFormat =
+        serde_json::from_str(&include_str!("stratolopusarealus.cha")).unwrap();
+    h.insert("stratolopusarealus".to_string(), stratolopusarealus);
+
+    let cholorea_t: CharacterSaveFormat =
+        serde_json::from_str(&include_str!("choloreaT.cha")).unwrap();
+    h.insert("cholorea_t".to_string(), cholorea_t);
+
+    let rox: CharacterSaveFormat = serde_json::from_str(&include_str!("rox.cha")).unwrap();
+    h.insert("rox".to_string(), rox);
+
+    let franky: CharacterSaveFormat = serde_json::from_str(&include_str!("franky.cha")).unwrap();
+    h.insert("franky".to_string(), franky);
+
+    let piko: CharacterSaveFormat = serde_json::from_str(&include_str!("piko.cha")).unwrap();
+    h.insert("piko".to_string(), piko);
+
+    h
+}
+
+pub fn take_pos(c: CharacterSaveFormat) -> Vec<Vec2> {
+    let v = c
+        .data
+        .iter()
+        .map(|node| node.pos * MASS_MULT)
+        .collect::<Vec<_>>();
+    v
+}
 
 pub fn see(
     mut game: ResMut<Game>,

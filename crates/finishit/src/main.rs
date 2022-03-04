@@ -398,9 +398,13 @@ fn setup(
     //     .insert(Cam::default());
     kdtrees.as_mut().populate(game.as_ref());
 
+    let mut cam_trans = Transform::from_translation(Vec3::new(LEVEL_WIDTH / 2.0, 0.0, 10.0));
+    cam_trans.scale.x = 0.5;
+    cam_trans.scale.y = 0.5;
+
     commands
         .spawn_bundle(OrthographicCameraBundle {
-            transform: Transform::from_translation(Vec3::new(LEVEL_WIDTH / 2.0, 0.0, 10.0)),
+            transform: cam_trans,
 
             orthographic_projection: OrthographicProjection {
                 scale: 1.0,
@@ -472,19 +476,31 @@ fn setup(
         ..Default::default()
     });
 
-    let contents = include_str!("notme.cha");
+    // let contents = include_str!("piko.cha");
 
-    let loaded_character: CharacterSaveFormat = serde_json::from_str(&contents).unwrap();
+    // let piko: CharacterSaveFormat = serde_json::from_str(&contents).unwrap();
 
-    let nodes = loaded_character
-        .data
-        .iter()
-        .map(|node| node.pos * MASS_MULT)
-        .collect::<Vec<_>>();
+    // let piko_nodes = piko
+    //     .data
+    //     .iter()
+    //     .map(|node| node.pos * MASS_MULT)
+    //     .collect::<Vec<_>>();
 
     // let character: MarkerInstanceMatData = loaded_character.clone().into();
 
+    ///// Load Creatures
+    let creatures_map = load_creatures();
+    let creatures_vec = creatures_map.values().collect::<Vec<_>>();
+
+    let guardian: CharacterSaveFormat =
+        serde_json::from_str(&include_str!("guardian.cha")).unwrap();
+
+    let mut rng = rand::thread_rng();
+    ////////
+
     //////////////////// main character////////////////////////////////////////////////////////////////////////
+
+    let main_creature = creatures_map.get("franky").unwrap();
     // the 1 is for the main character's id
     let mut main_agent = Agent::gen_random(&GameStage::Bottom, 1);
     // main_agent.position = Vec2::new(LEVEL_WIDTH / 2.0, 20.0);
@@ -497,7 +513,7 @@ fn setup(
     // main_agent.radius = main_agent.mass * MASS_MULT * 0.5;
 
     let atom_size = Vec2::splat(ATOM_MULT * main_agent.mass * MASS_MULT);
-    main_agent.body = nodes
+    main_agent.body = take_pos(main_creature.clone())
         .iter()
         .enumerate()
         .map(|(k, node)| Body {
@@ -545,48 +561,58 @@ fn setup(
         &mut meshes,
         main_agent.position,
         MASS_MULT * main_agent.mass * 1.05,
-        loaded_character.clone(),
+        main_creature.clone(),
         // core_id,
     );
 
     main_agent.entity = Some(parent_entity);
 
-    nodes.iter().enumerate().for_each(|(k, pos)| {
-        if pos.length() < 0.49 * MASS_MULT {
-            let transform = Transform::from_translation(pos.extend(0.05) * main_agent.mass);
+    take_pos(main_creature.clone())
+        .iter()
+        .enumerate()
+        .for_each(|(k, pos)| {
+            if pos.length() < 0.49 * MASS_MULT {
+                let transform = Transform::from_translation(pos.extend(0.05) * main_agent.mass);
 
-            let child_id = commands
-                .spawn_bundle(SpriteBundle {
-                    sprite: Sprite {
-                        color: Color::rgb(0.75, 0.75, 0.55),
-                        custom_size: Some(atom_size),
+                let child_id = commands
+                    .spawn_bundle(SpriteBundle {
+                        sprite: Sprite {
+                            color: Color::rgb(0.75, 0.75, 0.55),
+                            custom_size: Some(atom_size),
 
+                            ..Default::default()
+                        },
+                        transform,
+                        visibility: Visibility { is_visible: false },
                         ..Default::default()
-                    },
-                    transform,
-                    visibility: Visibility { is_visible: false },
-                    ..Default::default()
-                })
-                .insert(Atom)
-                .id();
+                    })
+                    .insert(Atom)
+                    .id();
 
-            main_agent.body[k].entity = Some(child_id);
-            main_agent.body[k].is_used = true;
+                main_agent.body[k].entity = Some(child_id);
+                main_agent.body[k].is_used = true;
 
-            // commands.entity(core_id).push_children(&[child_id]);
-            commands.entity(parent_entity).push_children(&[child_id]);
-        }
-    });
+                // commands.entity(core_id).push_children(&[child_id]);
+                commands.entity(parent_entity).push_children(&[child_id]);
+            }
+        });
     game.agents.insert(1, main_agent);
 
     //////////////////// main character ////////////////////////////////////////////////////////////////////////
 
     ////////////////////////////// spawn all npcs ////////////////////////////////////////////////
-    let mut rng = rand::thread_rng();
+
     for (id, mut agent) in game.agents.iter_mut() {
         if id == &1 {
             continue;
         }
+
+        let creature_index = rng.gen_range(0..creatures_vec.len());
+        let mut creature = creatures_vec[creature_index].clone();
+        if agent.is_guardian {
+            creature = guardian.clone();
+        }
+
         let creature_pos = agent.position;
         // println!("creature pos: {:?}", creature_pos);
 
@@ -596,6 +622,8 @@ fn setup(
         let creature_size = Vec2::splat(MASS_MULT * agent.mass * 0.001);
 
         // agent.radius = agent.mass * MASS_MULT * 0.5;
+
+        // let contents = include_str!("piko.cha");
 
         let mut agent_trans = Transform::from_translation(creature_pos.extend(0.09));
 
@@ -617,12 +645,14 @@ fn setup(
             // .insert(AgentId { kdtree_hash: *id })
             .id();
 
+        if agent.is_guardian {}
+
         let parent_entity_npc = spawn_agent(
             &mut commands,
             &mut meshes,
             agent.position,
             MASS_MULT * agent.mass * 1.35,
-            loaded_character.clone(),
+            creature.clone(),
             *id,
             // core_id,
         );
@@ -632,7 +662,7 @@ fn setup(
 
         let atom_size = Vec2::splat(ATOM_MULT * agent.mass * MASS_MULT);
 
-        agent.body = nodes
+        agent.body = take_pos(creature.clone())
             .iter()
             .enumerate()
             .map(|(k, node)| Body {
@@ -646,7 +676,7 @@ fn setup(
             .collect::<Vec<_>>();
         // main_agent.mass = 0.05;
 
-        nodes.iter().enumerate().for_each(|(k, pos)| {
+        take_pos(creature).iter().enumerate().for_each(|(k, pos)| {
             if pos.length() < 0.49 * MASS_MULT {
                 let mut transform = Transform::from_translation(pos.extend(4.0) * agent.mass);
 

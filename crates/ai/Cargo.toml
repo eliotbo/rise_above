@@ -1,7 +1,16 @@
 [package]
-name = "ai"
+name = "rise_above_spawner"
 version = "0.1.0"
 edition = "2021"
+authors = ["Eliot Bolduc"]
+description = "Spawns creatures, food and items"
+license = "GNU GPLv3"
+readme = "README.md"
+categories = [
+    "game-development"
+]
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 
 

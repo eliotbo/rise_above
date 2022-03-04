@@ -10,11 +10,17 @@ use std::collections::HashMap;
 use strum::IntoEnumIterator;
 use strum_macros::EnumIter;
 
+#[derive(Component, Clone, Debug)]
+pub struct Atom;
+
 #[derive(Clone, Debug)]
 pub struct Body {
     pub atom_pos: Vec2,
+    pub rotation: Quat,
     pub atom_size: f32,
     pub acceleration: Vec2,
+    pub entity: Option<Entity>,
+    pub is_used: bool,
     // pub item_anchors: Vec2,
 }
 
@@ -28,9 +34,12 @@ pub struct Agent {
     pub look_at_angle: f32,
     pub velocity: Vec2,
     pub target_position: Vec2,
+    pub main_char_target_pos: Option<Vec2>,
+    pub radius: f32,
 
     pub body: Vec<Body>,
     pub just_collided: bool, // compute the atom damped bounce animation
+    pub other_collider_mass: f32,
 
     pub boost_time: f32,
     pub boost: bool,
@@ -42,8 +51,9 @@ pub struct Agent {
     pub social: Social,
 
     pub hp: f32,
-    pub energy_shots: f32,
+    pub energy: f32,
     pub mass: f32,
+    pub previous_mass: f32,
     pub satiety: f32,
     pub power_usage: f32,
     pub memory_time: f32,
@@ -56,6 +66,7 @@ pub struct Agent {
     pub sensors: Sensors,
 
     pub maybe_team_id: Option<u32>,
+    pub entity: Option<Entity>,
 }
 
 impl Agent {
@@ -67,51 +78,61 @@ impl Agent {
         let race: Race;
         let hp: f32;
         // let social_attributes: SocialAttributes;
-        let hearing_range: f32;
-        let sight_range: f32;
+        // let hearing_range: f32;
+        // let sight_range: f32;
+
         let memory_time: f32;
+
+        // can see 5 times it's radius
+        // let eyes = 10.0;
 
         match stage {
             bottom @ GameStage::Bottom => {
                 position = Vec2::new(
-                    rng.gen_range(BOTTOM_LIMIT_X_MIN..BOTTOM_LIMIT_X_MAX),
-                    rng.gen_range(0.0..BOTTOM_STAGE_LIMIT),
-                ) * POS_MULT;
-                mass = rng.gen_range(0.0..BOTTOM_STAGE_LIMIT);
+                    rng.gen_range(BOTTOM_LIMIT_X_MIN..BOTTOM_LIMIT_X_MAX) * LEVEL_WIDTH,
+                    rng.gen_range(0.0..BOTTOM_STAGE_LIMIT) * LEVEL_HEIGHT,
+                );
+                mass = rng.gen_range(0.02..BOTTOM_STAGE_LIMIT);
                 hp = rng.gen_range(0.0..BOTTOM_STAGE_LIMIT);
-                hearing_range = rng.gen_range(0.0..BOTTOM_STAGE_LIMIT);
-                sight_range = rng.gen_range(0.0..BOTTOM_STAGE_LIMIT);
+
                 race = Race::random_race(&bottom);
             }
             mid @ GameStage::Mid => {
                 position = Vec2::new(
-                    rng.gen_range(0.0..1.0),
-                    rng.gen_range(BOTTOM_STAGE_LIMIT..MID_STAGE_LIMIT),
-                ) * POS_MULT;
+                    rng.gen_range(0.0..1.0) * LEVEL_WIDTH,
+                    rng.gen_range(BOTTOM_STAGE_LIMIT..MID_STAGE_LIMIT) * LEVEL_HEIGHT,
+                );
                 mass = rng.gen_range(BOTTOM_STAGE_LIMIT..MID_STAGE_LIMIT);
                 hp = rng.gen_range(BOTTOM_STAGE_LIMIT..MID_STAGE_LIMIT);
-                hearing_range = rng.gen_range(BOTTOM_STAGE_LIMIT..MID_STAGE_LIMIT);
-                sight_range = rng.gen_range(BOTTOM_STAGE_LIMIT..MID_STAGE_LIMIT);
+
                 race = Race::random_race(&mid);
                 // social_attributes = race.gen_socials();
             }
             top @ GameStage::Top => {
                 position = Vec2::new(
-                    rng.gen_range(0.0..TOP_STAGE_LIMIT),
-                    rng.gen_range(MID_STAGE_LIMIT..TOP_STAGE_LIMIT),
-                ) * POS_MULT;
+                    rng.gen_range(0.02..TOP_STAGE_LIMIT) * LEVEL_WIDTH,
+                    rng.gen_range(MID_STAGE_LIMIT..TOP_STAGE_LIMIT) * LEVEL_HEIGHT,
+                );
                 mass = rng.gen_range(MID_STAGE_LIMIT..TOP_STAGE_LIMIT);
                 hp = rng.gen_range(MID_STAGE_LIMIT..TOP_STAGE_LIMIT);
-                hearing_range = rng.gen_range(MID_STAGE_LIMIT..TOP_STAGE_LIMIT);
-                sight_range = rng.gen_range(MID_STAGE_LIMIT..TOP_STAGE_LIMIT);
+                // hearing_range = MASS_MULT * mass * eyes;
+
                 race = Race::random_race(&top);
                 // social_attributes = race.gen_socials();
             }
         };
 
+        let radius = mass * MASS_MULT * 0.5;
+
+        let sight_range = radius * 10.0;
+        let hearing_range = sight_range;
+
         let race_attributes = race.gen_attributes();
         let social_attributes = race_attributes.social_attributes;
         memory_time = race_attributes.memory_time;
+
+        let look_at_angle: f32 = rng.gen_range(0.0..6.3);
+        let target_position = position + Vec2::new(look_at_angle.cos(), look_at_angle.sin()) * 50.0;
 
         let social = Social {
             social_attributes,
@@ -124,14 +145,22 @@ impl Agent {
             ..Default::default()
         };
 
+        let last_position = position;
+        // println!("ps: {:?}", position);
+        // println!("last_position {:?}", last_position);
+
         Agent {
             id: AgentId { kdtree_hash: id },
             position,
+            last_position,
+            target_position,
             mass,
+            radius,
             hp,
             social,
             sensors,
             memory_time,
+            look_at_angle,
             ..Default::default()
         }
     }
@@ -159,6 +188,16 @@ impl Agent {
 
     pub fn compute_look_at_dir(&mut self) -> Vec2 {
         Vec2::new(self.look_at_angle.cos(), self.look_at_angle.sin())
+    }
+
+    pub fn forward_dir(&self) -> Vec2 {
+        let verlet_velocity = self.position - self.last_position;
+
+        if verlet_velocity == Vec2::ZERO {
+            return Vec2::new(0.0, 0.0);
+        } else {
+            return verlet_velocity.normalize();
+        }
     }
 
     pub fn compute_left_and_right_dir(&self) -> (Vec2, Vec2) {
@@ -266,7 +305,7 @@ impl Agent {
     pub fn forget_agents(&mut self, time: f32) {
         let mut to_remove: Vec<u32> = Vec::new();
         for (id, sight_data) in self.sensors.agent_sight.iter_mut() {
-            if time - sight_data.time_of_last_sight > self.memory_time * 2.0 {
+            if time - sight_data.time_of_last_sight > self.memory_time {
                 to_remove.push(*id);
             }
         }
@@ -305,7 +344,9 @@ impl Agent {
     pub fn consume_food(&mut self, food: &Food) {
         //
         self.mass += food.mass;
-        self.energy_shots += food.energy;
+        self.energy += food.energy;
+
+        self.radius = self.mass * MASS_MULT * 0.5;
     }
 
     pub fn find_new_goal(&mut self, time: f32) {
@@ -326,21 +367,23 @@ impl Agent {
         let agents_in_sight = self.sensors.agent_sight.clone();
         let food_in_sight = self.sensors.food_sight.clone();
 
-        // if an item is in sight and the rng okays iit, then change the goal to get that item
-        if !self.sensors.item_sight.is_empty() && rng.gen::<f32>() < prob_collect {
-            //
-            let mut closest_item = 0u32;
-            let mut closest_dist = 1000000.0;
-            for (id, items_in_sight) in items_in_sight.clone() {
-                if items_in_sight.distance < closest_dist {
-                    closest_item = id;
-                    closest_dist = items_in_sight.distance;
-                }
-            }
-            self.goal = Goal::Item(items_in_sight.get(&closest_item).unwrap().clone());
+        // // if an item is in sight and the rng okays iit, then change the goal to get that item
+        // if !self.sensors.item_sight.is_empty() && rng.gen::<f32>() < prob_collect {
+        //     //
+        //     let mut closest_item = 0u32;
+        //     let mut closest_dist = 1000000.0;
+        //     for (id, items_in_sight) in items_in_sight.clone() {
+        //         if items_in_sight.distance < closest_dist {
+        //             closest_item = id;
+        //             closest_dist = items_in_sight.distance;
+        //         }
+        //     }
+        //     self.goal = Goal::Item(items_in_sight.get(&closest_item).unwrap().clone());
 
         // if an agent is in sight and the rng okays iit, then change the goal to go to that agent
-        } else if !self.sensors.agent_sight.is_empty() && rng.gen::<f32>() < prob_altruism {
+        // } else
+
+        if !self.sensors.agent_sight.is_empty() && rng.gen::<f32>() < prob_altruism {
             //
             let a = agents_in_sight.iter().next().unwrap().1;
             self.goal = Goal::GoToAgent(AgentId { kdtree_hash: a.id });
@@ -403,22 +446,22 @@ impl Agent {
             _ => {}
         }
 
-        let theta = self.target_position.y.atan2(self.target_position.x);
-        let delta_theta = theta - self.look_at_angle; // if positive, turn left
-        if delta_theta > 0.01 {
-            self.turning = Turning::Left;
-        } else if delta_theta < 0.01 {
-            self.turning = Turning::Right;
-        } else {
-            self.turning = Turning::None;
-        }
+        // let theta = self.target_position.y.atan2(self.target_position.x);
+        // let delta_theta = theta - self.look_at_angle; // if positive, turn left
+        // if delta_theta > 0.01 {
+        //     self.turning = Turning::Left(delta_theta.abs());
+        // } else if delta_theta < 0.01 {
+        //     self.turning = Turning::Right(delta_theta.abs());
+        // } else {
+        //     self.turning = Turning::None;
+        // }
 
-        if let Goal::None = self.goal {
-            self.turning = Turning::None;
-            self.acc = Acceleration::None;
-        } else {
-            self.acc = Acceleration::None;
-        }
+        // if let Goal::None = self.goal {
+        //     self.turning = Turning::None;
+        //     self.acc = Acceleration::None;
+        // } else {
+        //     self.acc = Acceleration::None;
+        // }
     }
 
     pub fn react_to_collision(
@@ -451,6 +494,13 @@ impl Agent {
         // 2. run away
         // 3. do nothing
         // 4. ask to team
+    }
+
+    pub fn update_mass_properties(&mut self) {
+        self.mass = 0.1;
+        self.radius = self.mass * MASS_MULT * 0.5;
+        self.sensors.sight_range = self.radius * 10.0;
+        self.sensors.hearing_range = self.sensors.sight_range;
     }
 
     // // invitation to already existing team
@@ -495,9 +545,10 @@ impl Default for Agent {
         let mut rng = thread_rng();
 
         let id: u32 = rng.gen();
-        let eye_angle: f32 = rng.gen();
+        // let eye_angle: f32 = rng.gen();
 
         let sensors = Sensors::default();
+        let mass = 0.1;
 
         return Self {
             // id: id,
@@ -509,11 +560,14 @@ impl Default for Agent {
             last_position: Vec2::new(0.0, 0.0),
             target_position: Vec2::new(0.0, 0.0),
             speed: 0.0,
-            look_at_angle: eye_angle * 3.1415 * 2.0,
+            look_at_angle: -3.1415 / 2.0,
             velocity: Vec2::ZERO,
+            main_char_target_pos: None,
+            radius: mass * MASS_MULT * 0.5,
 
             body: vec![],
             just_collided: false,
+            other_collider_mass: 0.0,
 
             boost_time: 0.0,
             boost: false,
@@ -525,8 +579,9 @@ impl Default for Agent {
             social: Social::default(),
 
             hp: 1.0,
-            mass: 0.1,
-            energy_shots: 10.0,
+            mass,
+            previous_mass: mass,
+            energy: 100000000.0,
             satiety: 1.0,
             memory_time: 4.0,
 
@@ -540,6 +595,7 @@ impl Default for Agent {
             sensors: sensors,
 
             maybe_team_id: None,
+            entity: None,
         };
     }
 }
@@ -565,7 +621,7 @@ impl Default for Sensors {
     fn default() -> Self {
         Self {
             hearing_range: 1.0,
-            sight_range: 1.0,
+            sight_range: 100.0,
             agent_sight: HashMap::new(),
             item_sight: HashMap::new(),
             food_sight: HashMap::new(),
@@ -582,8 +638,8 @@ impl Default for Sensors {
 
 #[derive(Clone, Debug)]
 pub enum Turning {
-    Left,
-    Right,
+    Left(f32),
+    Right(f32),
     None,
 }
 
@@ -822,7 +878,7 @@ impl Race {
     }
 }
 
-#[derive(Clone, Debug, Component)]
+#[derive(Clone, Debug, Component, PartialEq)]
 pub struct AgentId {
     pub kdtree_hash: u32,
     // pub maybe_AgentId: Option<AgentId>,
@@ -870,47 +926,6 @@ impl Default for Social {
                 collectioneur,
             },
         };
-    }
-}
-
-pub fn agent_decisions(game: &mut Game) {
-    let mut agent_goals = HashMap::new();
-
-    game.agents.iter().for_each(|(id, agent)| {
-        agent_goals.insert(id, agent.goal.clone());
-    });
-
-    let mut rng = rand::thread_rng();
-    let time = game.time;
-
-    for (id, agent) in game.agents.iter_mut() {
-        // make a decision once per 10 frames on average
-        if rng.gen::<f32>() < 0.1 {
-            // if the past goal has been going on for too long, change it
-            if time - agent.goal_time > agent.memory_time {
-                agent.find_new_goal(time);
-            }
-
-            if let Goal::None = agent.goal {
-                agent.find_new_goal(time);
-            }
-        }
-    }
-}
-
-pub fn agent_action(game: &mut Game) {
-    let mut rng = rand::thread_rng();
-
-    let agent_positions = game
-        .agents
-        .iter()
-        .map(|(id, x)| (*id, x.position))
-        .collect::<HashMap<_, _>>();
-
-    for (_id, agent) in game.agents.iter_mut() {
-        if rng.gen::<f32>() < 0.5 {
-            agent.act(&agent_positions);
-        }
     }
 }
 

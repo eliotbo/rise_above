@@ -7,6 +7,15 @@
 
 // mod lib;
 
+use bevy::render::view::{ComputedVisibility, Visibility};
+use bevy::{
+    diagnostic::{FrameTimeDiagnosticsPlugin, LogDiagnosticsPlugin},
+    prelude::*,
+    sprite::Material2dPlugin,
+    sprite::MaterialMesh2dBundle,
+    sprite::Mesh2dHandle,
+};
+
 pub use agent::*;
 use cam::*;
 pub use encoding::*;
@@ -19,7 +28,6 @@ pub use inputs::*;
 
 // pub use libaaa::*;
 
-use bevy::prelude::*;
 use rand::prelude::*;
 
 // use std::fs::File;
@@ -162,6 +170,7 @@ fn main() {
         })
         .add_plugins(DefaultPlugins)
         .add_plugin(CamPlugin)
+        .add_plugin(MarkerMesh2dPlugin)
         // .add_plugin(InspectorPlugin::<MovementParams>::new())
         .add_event::<CollisionEvent>()
         .insert_resource(Cursor::default())
@@ -183,11 +192,145 @@ fn main() {
         .add_system(energy_ground_state)
         .add_system(winning_condition)
         .add_system(send_guardians)
+        .add_system(update_time)
+        .add_system(update_character_frequency)
         //
         // .add_system(agent_movement_debug)
         // .add_system(load_character)
         // .add_system(load_character_auto)
         .run();
+}
+
+pub fn update_time(time: Res<Time>, mut query: Query<(&mut CharacterUniform,)>) {
+    for (mut character_uniform,) in query.iter_mut() {
+        character_uniform.time = time.seconds_since_startup() as f32;
+    }
+}
+
+fn update_character_frequency(
+    // mut commands: Commands,
+    game: ResMut<Game>,
+    mut query: Query<(&mut MarkerInstanceMatData, &MainCharacter)>,
+) {
+    //
+
+    let agent = game.agents.get(&1).unwrap();
+    let freq = (0.25 + agent.energy / 2.5).clamp(0.25, 0.98);
+
+    for (mut character_instance_mat_data, _main_char) in query.iter_mut() {
+        //
+        // let mut instance_material = character_instance_mat_data.0 .0;
+
+        // let len = character_instance_mat_data.0.len();
+        for k in 0..26 {
+            character_instance_mat_data.0[0].set_frequency(freq, k);
+            // println!("changed");
+        }
+
+        // for (k, mut instance_data) in instance_material.iter_mut().enumerate() {
+        //     instance_data.set_frequency(freq, k);
+        // }
+    }
+}
+
+fn spawn_character(
+    commands: &mut Commands,
+    meshes: &mut ResMut<Assets<Mesh>>,
+    quad_position: Vec2,
+    quad_size: f32,
+    character_in_save_format: CharacterSaveFormat,
+    // character_parent: Entity,
+) -> Entity {
+    let mut instance_data_vec: MarkerInstanceMatData = character_in_save_format.into();
+    for (k, instance) in instance_data_vec.0.iter_mut().enumerate() {
+        instance.set_frequency(40.0, k);
+    }
+
+    // let quad_position = Vec2::ZERO;
+    let entity = commands
+        .spawn_bundle((
+            Mesh2dHandle(meshes.add(Mesh::from(shape::Quad {
+                size: Vec2::splat(quad_size),
+                flip: false,
+            }))),
+            GlobalTransform::default(),
+            Transform::from_translation(Vec3::new(quad_position.x, quad_position.y, 0.12)),
+            // Transform::from_translation(Vec3::new(0.0, 0.0, -0.12)),
+            Visibility::default(),
+            ComputedVisibility::default(),
+            instance_data_vec,
+            // NoFrustumCulling,
+        ))
+        .insert(AgentId { kdtree_hash: 1 })
+        .insert(MainCharacter { id: 1 })
+        .insert(InstanceDataNotEncoded::default())
+        .insert(CharacterUniform {
+            character_size: 0.1,
+            core_size: 1.0,
+            zoom: 1.0,
+            time: 0.0,
+            character_point_color: Vec4::new(0.0, 1.0, 0.0, 1.0),
+            color: Color::hex("8c114a").unwrap().into(),
+            quad_size,
+            inner_canvas_size_in_pixels: Vec2::new(300.0, 300.0),
+            // outer_border: plot.outer_border,
+            canvas_position: quad_position,
+            contour: 1.0,
+        })
+        .id();
+    // commands.entity(character_parent).push_children(&[entity]);
+    return entity;
+}
+
+fn spawn_agent(
+    commands: &mut Commands,
+    meshes: &mut ResMut<Assets<Mesh>>,
+    quad_position: Vec2,
+    quad_size: f32,
+    character_in_save_format: CharacterSaveFormat,
+    id: u32,
+    // character_parent: Entity,
+) -> Entity {
+    let mut instance_data_vec: MarkerInstanceMatData = character_in_save_format.into();
+    for (k, instance) in instance_data_vec.0.iter_mut().enumerate() {
+        instance.set_frequency(40.0, k);
+    }
+
+    // let quad_position = Vec2::ZERO;
+    let entity = commands
+        .spawn_bundle((
+            Mesh2dHandle(meshes.add(Mesh::from(shape::Quad {
+                size: Vec2::splat(quad_size),
+                flip: false,
+            }))),
+            GlobalTransform::default(),
+            Transform::from_translation(Vec3::new(quad_position.x, quad_position.y, 0.12)),
+            // Transform::from_translation(Vec3::new(0.0, 0.0, -0.12)),
+            Visibility::default(),
+            ComputedVisibility::default(),
+            instance_data_vec,
+            // NoFrustumCulling,
+        ))
+        .insert(AgentId { kdtree_hash: id })
+        // .insert(MainCharacter { id: 1 })
+        .insert(NPC)
+        .insert(InstanceDataNotEncoded::default())
+        .insert(CharacterUniform {
+            character_size: 0.1,
+            core_size: 1.0,
+            zoom: 1.0,
+            time: 0.0,
+            character_point_color: Vec4::new(0.0, 1.0, 0.0, 1.0),
+            color: Color::hex("8c114a").unwrap().into(),
+            quad_size,
+            inner_canvas_size_in_pixels: Vec2::new(300.0, 300.0),
+            // outer_border: plot.outer_border,
+            canvas_position: quad_position,
+            contour: 1.0,
+        })
+        .id();
+    // commands.entity(character_parent).push_children(&[entity]);
+    return entity;
 }
 
 pub fn send_guardians(mut game: ResMut<Game>, time: Res<Time>) {
@@ -247,6 +390,7 @@ fn setup(
     mut game: ResMut<Game>,
     mut kdtrees: ResMut<KdTrees>,
     asset_server: Res<AssetServer>,
+    mut meshes: ResMut<Assets<Mesh>>,
     // time: Res<Time>,
 ) {
     // commands
@@ -347,8 +491,9 @@ fn setup(
     // main_agent.position = Vec2::new(LEVEL_WIDTH / 2.0, 20.0);
     main_agent.position = Vec2::new(LEVEL_WIDTH / 2.0, LEVEL_HEIGHT - 1000.0 - 20.0);
     main_agent.last_position = main_agent.position;
+    main_agent.mass = STARTING_MASS;
     // main_agent.mass = 0.1;
-    // main_agent.update_mass_properties();
+    main_agent.update_mass_properties();
     // main_agent.radius = main_agent.mass * MASS_MULT * 0.5;
 
     let atom_size = Vec2::splat(ATOM_MULT * main_agent.mass * MASS_MULT);
@@ -387,20 +532,28 @@ fn setup(
 
                 ..Default::default()
             },
+            visibility: Visibility { is_visible: false },
             transform,
             ..Default::default()
         })
-        .insert(AgentId { kdtree_hash: 1 })
-        .insert(MainCharacter { id: 1 })
+        // .insert(AgentId { kdtree_hash: 1 })
+        // .insert(MainCharacter { id: 1 })
         .id();
-    main_agent.entity = Some(core_id);
 
-    println!("core id: {}", nodes[0]);
-    println!("core id: {}", 0.49 * MASS_MULT * main_agent.mass);
+    let parent_entity = spawn_character(
+        &mut commands,
+        &mut meshes,
+        main_agent.position,
+        MASS_MULT * main_agent.mass * 1.05,
+        loaded_character.clone(),
+        // core_id,
+    );
+
+    main_agent.entity = Some(parent_entity);
 
     nodes.iter().enumerate().for_each(|(k, pos)| {
         if pos.length() < 0.49 * MASS_MULT {
-            let transform = Transform::from_translation(pos.extend(4.0) * main_agent.mass);
+            let transform = Transform::from_translation(pos.extend(0.05) * main_agent.mass);
 
             let child_id = commands
                 .spawn_bundle(SpriteBundle {
@@ -411,6 +564,7 @@ fn setup(
                         ..Default::default()
                     },
                     transform,
+                    visibility: Visibility { is_visible: false },
                     ..Default::default()
                 })
                 .insert(Atom)
@@ -419,7 +573,8 @@ fn setup(
             main_agent.body[k].entity = Some(child_id);
             main_agent.body[k].is_used = true;
 
-            commands.entity(core_id).push_children(&[child_id]);
+            // commands.entity(core_id).push_children(&[child_id]);
+            commands.entity(parent_entity).push_children(&[child_id]);
         }
     });
     game.agents.insert(1, main_agent);
@@ -455,13 +610,25 @@ fn setup(
                     ..Default::default()
                 },
                 transform: agent_trans,
+                visibility: Visibility { is_visible: false },
                 ..Default::default()
             })
-            .insert(NPC)
-            .insert(AgentId { kdtree_hash: *id })
+            // .insert(NPC)
+            // .insert(AgentId { kdtree_hash: *id })
             .id();
 
-        agent.entity = Some(npc_entity);
+        let parent_entity_npc = spawn_agent(
+            &mut commands,
+            &mut meshes,
+            agent.position,
+            MASS_MULT * agent.mass * 1.35,
+            loaded_character.clone(),
+            *id,
+            // core_id,
+        );
+        agent.entity = Some(parent_entity_npc);
+
+        // agent.entity = Some(npc_entity);
 
         let atom_size = Vec2::splat(ATOM_MULT * agent.mass * MASS_MULT);
 
@@ -491,6 +658,7 @@ fn setup(
 
                             ..Default::default()
                         },
+                        visibility: Visibility { is_visible: false },
                         transform,
                         ..Default::default()
                     })
@@ -501,7 +669,10 @@ fn setup(
                 agent.body[k].entity = Some(npc_child_id);
                 agent.body[k].is_used = true;
 
-                commands.entity(npc_entity).push_children(&[npc_child_id]);
+                commands
+                    .entity(parent_entity_npc)
+                    .push_children(&[npc_child_id]);
+                // commands.entity(npc_entity).push_children(&[npc_child_id]);
             }
         });
     }
@@ -560,7 +731,7 @@ fn setup(
     commands
         .spawn_bundle(Text2dBundle {
             text: Text::with_section(
-                "Focus on your breathing and rise above the surface.              The moshpit is essential.             Once a friend, twice a foe.",
+                "Come in the moshpit. It will rejuvenate you.          Once a friend, twice a foe.           Rise above the surface.",
                 text_style.clone(),
                 text_alignment,
             ),

@@ -20,6 +20,8 @@ use crate::*;
 
 // use bevy::prelude::*;
 
+pub const STARTING_MASS: f32 = 0.04;
+
 pub const NUM_AGENTS: usize = 100;
 pub const NUM_ITEMS: usize = 10;
 pub const NUM_FOODS: usize = 5000;
@@ -32,7 +34,7 @@ pub const TOTAL_BOOST_TIME: f32 = 0.3;
 
 pub const MASS_MULT: f32 = 1000.0;
 
-pub const ATOM_MULT: f32 = 0.15;
+pub const ATOM_MULT: f32 = 0.14;
 
 pub const BOTTOM_STAGE_LIMIT: f32 = 0.05;
 pub const MID_STAGE_LIMIT: f32 = 0.2;

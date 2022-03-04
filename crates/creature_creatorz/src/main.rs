@@ -12,7 +12,8 @@ use bevy::{
 
 use balls2d::*;
 use bevy_inspector_egui::InspectorPlugin;
-
+// quad size: 54
+// ATOM_MULT: 14
 fn main() {
     App::new()
         .insert_resource(WindowDescriptor {
@@ -360,7 +361,7 @@ fn update_character(
         if let Some(selected_index) = selected.ball_index {
             character_instance_mat_data.0[selected.instance]
                 .set_data(selected_index, instance_data_not_encoded.clone());
-            println!("changed");
+            println!("changed: {:?}", selected.instance);
         }
 
         // println!("selected :{}", instance_data_not_encoded.pos);

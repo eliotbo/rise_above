@@ -495,7 +495,8 @@ fn fragment(in: FragmentInput) -> [[location(0)]] vec4<f32> {
     let dark = float4(blue3.x*bl, blue3.y*bl, blue3.z*bl, 1.0);
 
     let bgc = float4(0.92, 0.93, 0.95, 1.0) * 0.75;
-    let background = blue2; // toLinear(uni.color);
+    var background = blue2; // toLinear(uni.color);
+    background.a = 0.0;
     // let background = fushia;
     let main_color = fushia;
     let contour_color = blue3;
@@ -553,7 +554,7 @@ fn fragment(in: FragmentInput) -> [[location(0)]] vec4<f32> {
         let neumorph = 0.5  ;
 
         // var freq = data.frequency;
-        let freq = pow(2.0 * data.frequency , 3.0);
+        let freq = pow(2.0 * data.frequency , 3.0) ;
         let max_size =  data.max_size * biggest_size;
         let min_size = data.min_size * biggest_size;
         let noise = data.noise * 2.0;
@@ -716,8 +717,8 @@ fn fragment(in: FragmentInput) -> [[location(0)]] vec4<f32> {
     out_col = mix(out_col, joint_color, 1.0 - s_main_j); 
     /////////////////////////////////////////////////// joints ////////////////////////////////////////////
 
-
-    return out_col + 0.0;
+    // out_col.a = 0.6;
+    return out_col ;
 
   // return float4(0.0, 1.0, 0.0, 1.0);
 

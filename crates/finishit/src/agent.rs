@@ -476,7 +476,6 @@ impl Agent {
     }
 
     pub fn update_mass_properties(&mut self) {
-        self.mass = 0.1;
         self.radius = self.mass * MASS_MULT * ATOM_MULT;
         self.sensors.sight_range = self.radius * 10.0;
         self.sensors.hearing_range = self.sensors.sight_range;

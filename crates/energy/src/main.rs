@@ -176,7 +176,7 @@ fn main() {
         .add_system(forget)
         .add_system(agent_decisions)
         .add_system(agent_action)
-        .add_system(update_agent_properties.exclusive_system().at_start())
+        .add_system(update_agent_properties.exclusive_system().at_end())
         .add_system(energy_ground_state)
         .add_system(winning_condition)
         .add_system(send_guardians)
@@ -197,6 +197,18 @@ pub fn send_guardians(mut game: ResMut<Game>, time: Res<Time>) {
                 // guardians
                 if *id >= 20 && *id < 40 {
                     agent.goal = Goal::Bully(1); // main_char.id;
+                    agent.goal_time = time.seconds_since_startup() as f32;
+                }
+            }
+        } else {
+            for (id, agent) in game.agents.iter_mut() {
+                //
+                // guardians
+                if *id >= 20 && *id < 35 {
+                    agent.goal = Goal::GoTo(agent.guardian_pos); // main_char.id;
+                    agent.goal_time = time.seconds_since_startup() as f32;
+                } else if *id < 40 {
+                    agent.goal = Goal::Bully(1);
                     agent.goal_time = time.seconds_since_startup() as f32;
                 }
             }

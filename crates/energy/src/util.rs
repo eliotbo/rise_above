@@ -215,11 +215,24 @@ impl Game {
         });
 
         // guardians have ids between 20 and 40
-        (0..10).for_each(|k| {
+        (0..5).for_each(|k| {
             //
 
             // let id: u32 = rng.gen();
-            let x_pos = LEVEL_WIDTH * k as f32 / 10.0;
+            let x_pos = LEVEL_WIDTH / 2.0 * k as f32 / 10.0 * 0.85;
+            let pos = Vec2::new(x_pos, LEVEL_HEIGHT - 2000.0);
+            // avoid accidentally duplicating the main character's id
+
+            let random_agent = Agent::gen_guardian(pos, k + 20);
+
+            agents.insert(k + 20, random_agent);
+        });
+
+        (5..10).for_each(|k| {
+            //
+
+            // let id: u32 = rng.gen();
+            let x_pos = LEVEL_WIDTH - LEVEL_WIDTH * (k - 5) as f32 / 10.0 * 0.85;
             let pos = Vec2::new(x_pos, LEVEL_HEIGHT - 2000.0);
             // avoid accidentally duplicating the main character's id
 

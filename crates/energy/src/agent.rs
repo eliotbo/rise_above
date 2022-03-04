@@ -67,6 +67,7 @@ pub struct Agent {
     pub entity: Option<Entity>,
 
     pub is_guardian: bool,
+    pub guardian_pos: Vec2,
 }
 
 impl Agent {
@@ -188,6 +189,7 @@ impl Agent {
         // let eyes = 10.0;
 
         position = pos;
+        let guardian_pos = pos;
         mass = rng.gen_range(0.11..0.2);
 
         // hearing_range = MASS_MULT * mass * eyes;
@@ -237,6 +239,7 @@ impl Agent {
             memory_time,
             look_at_angle,
             is_guardian,
+            guardian_pos,
             ..Default::default()
         }
     }
@@ -388,6 +391,9 @@ impl Agent {
 
         match self.goal.clone() {
             //
+            Goal::GoTo(pos) => {
+                self.target_position = pos;
+            }
             Goal::GoToAgent(agent_id) => {
                 self.target_position = *agent_positions.get(&agent_id).unwrap();
             }
@@ -567,6 +573,7 @@ impl Default for Agent {
 
             sensors: sensors,
             is_guardian: false,
+            guardian_pos: Vec2::ZERO,
 
             entity: None,
         };
@@ -710,6 +717,7 @@ pub enum Goal {
     SearchForFood,
     SearchForItem,
     FindPartner(f32), // mass
+    GoTo(Vec2),
     GoToAgent(u32),
     Food(FoodSight),
     Flee(Vec2), // direction

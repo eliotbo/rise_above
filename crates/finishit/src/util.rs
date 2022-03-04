@@ -221,7 +221,7 @@ impl Game {
             //
 
             // let id: u32 = rng.gen();
-            let x_pos = LEVEL_WIDTH / 2.0 * k as f32 / 10.0 * 0.85;
+            let x_pos = LEVEL_WIDTH / 2.0 * k as f32 / 10.0 * 0.95;
             let pos = Vec2::new(x_pos, LEVEL_HEIGHT - 2000.0);
             // avoid accidentally duplicating the main character's id
 
@@ -234,7 +234,7 @@ impl Game {
             //
 
             // let id: u32 = rng.gen();
-            let x_pos = LEVEL_WIDTH - LEVEL_WIDTH * (k - 5) as f32 / 10.0 * 0.85;
+            let x_pos = LEVEL_WIDTH - LEVEL_WIDTH * (k - 5) as f32 / 10.0 * 0.95;
             let pos = Vec2::new(x_pos, LEVEL_HEIGHT - 2000.0);
             // avoid accidentally duplicating the main character's id
 
@@ -941,34 +941,37 @@ pub fn collisions(
         /////////////// agent 1 /////////////////////////////////////////////////////////
         let mut agent = game.agents.get_mut(&collision.agent_id1).unwrap();
 
-        id_cache.push(agent.id);
+        if !agent.just_collided {
+            id_cache.push(agent.id);
 
-        // here no properties are changed, just information about the collision
-        agent.last_position = agent.position - collision.velocity1 * COLLISION_BOUNCE;
-        agent.just_collided = true;
-        agent.other_collider_mass = collision.other_collision_mass1;
+            // here no properties are changed, just information about the collision
+            agent.last_position = agent.position - collision.velocity1 * COLLISION_BOUNCE;
+            agent.just_collided = true;
+            agent.other_collider_mass = collision.other_collision_mass1;
 
-        collision_event.send(CollisionEvent {
-            agent_id: collision.agent_id1,
-            other_agent_id: collision.agent_id2,
-            other_is_guardian: collision.is_guardian2,
-        });
+            collision_event.send(CollisionEvent {
+                agent_id: collision.agent_id1,
+                other_agent_id: collision.agent_id2,
+                other_is_guardian: collision.is_guardian2,
+            });
+        }
 
         /////////////// agent 2 /////////////////////////////////////////////////////////
 
         let mut closest_agent = game.agents.get_mut(&collision.agent_id2).unwrap();
+        if !closest_agent.just_collided {
+            id_cache.push(closest_agent.id);
 
-        id_cache.push(closest_agent.id);
+            closest_agent.last_position = closest_agent.position - collision.velocity2;
+            closest_agent.just_collided = true;
+            closest_agent.other_collider_mass = collision.other_collision_mass2;
 
-        closest_agent.last_position = closest_agent.position - collision.velocity2;
-        closest_agent.just_collided = true;
-        closest_agent.other_collider_mass = collision.other_collision_mass2;
-
-        collision_event.send(CollisionEvent {
-            agent_id: collision.agent_id2,
-            other_agent_id: collision.agent_id1,
-            other_is_guardian: collision.is_guardian1,
-        });
+            collision_event.send(CollisionEvent {
+                agent_id: collision.agent_id2,
+                other_agent_id: collision.agent_id1,
+                other_is_guardian: collision.is_guardian1,
+            });
+        }
     }
 }
 
@@ -1020,9 +1023,10 @@ pub fn update_agent_properties(
         // let other_agent = game.agents.get(&collision_info.other_agent_id).unwrap();
         // let is_guardian = other_agent.is_guardian;
         let mut agent = game.agents.get_mut(&collision_info.agent_id).unwrap();
+        agent.just_collided = false;
         // unused
         if collision_info.other_is_guardian && agent.id == 1 {
-            agent.energy *= 0.5;
+            agent.energy *= 0.75;
             println!("energy GUARDIAN SMASH: {}", agent.energy);
         }
 
@@ -1042,6 +1046,7 @@ pub fn update_agent_properties(
             agent.energy *= 1.0 - ENERGY_INCREASE_RATE;
             agent.last_agent_hit = collision_info.other_agent_id;
             if agent.id == 1 {
+                println!("same collision with {}", collision_info.other_agent_id);
                 println!("energy decrease {}", agent.energy);
             }
         }

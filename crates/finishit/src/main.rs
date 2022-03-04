@@ -7,6 +7,7 @@
 
 // mod lib;
 
+use bevy::audio;
 use bevy::render::view::{ComputedVisibility, Visibility};
 use bevy::{
     diagnostic::{FrameTimeDiagnosticsPlugin, LogDiagnosticsPlugin},
@@ -15,6 +16,7 @@ use bevy::{
     sprite::MaterialMesh2dBundle,
     sprite::Mesh2dHandle,
 };
+use bevy_kira_audio::{Audio, AudioPlugin, InstanceHandle};
 
 pub use agent::*;
 use cam::*;
@@ -159,6 +161,20 @@ impl MovementParams {
     }
 }
 
+#[derive(Debug, Clone, Eq, PartialEq, Hash)]
+pub enum AppState {
+    InGame,
+    Ending,
+}
+struct LoopAudioInstanceHandle {
+    instance_handle: InstanceHandle,
+}
+
+pub struct GameEndTime {
+    time: f32,
+    do_start_music: bool,
+}
+
 fn main() {
     App::new()
         .insert_resource(WindowDescriptor {
@@ -171,34 +187,112 @@ fn main() {
         .add_plugins(DefaultPlugins)
         .add_plugin(CamPlugin)
         .add_plugin(MarkerMesh2dPlugin)
+        .add_plugin(AudioPlugin)
+        .add_state(AppState::InGame)
         // .add_plugin(InspectorPlugin::<MovementParams>::new())
         .add_event::<CollisionEvent>()
         .insert_resource(Cursor::default())
         .insert_resource(MovementParams::stage1())
         .insert_resource(Game::new())
         .insert_resource(KdTrees::new())
+        .insert_resource(GameEndTime {
+            time: 0.0,
+            do_start_music: true,
+        })
         .add_startup_system(setup)
-        .add_system(main_character_inputs)
-        .add_system(main_char_movement)
-        .add_system(agents_movement)
-        .add_system(record_mouse_events_system)
-        .add_system(collisions)
-        .add_system(see)
-        .add_system(update_agent_kdtree)
-        .add_system(forget)
-        .add_system(agent_decisions)
-        .add_system(agent_action)
-        .add_system(update_agent_properties.exclusive_system().at_end())
-        .add_system(energy_ground_state)
-        .add_system(winning_condition)
-        .add_system(send_guardians)
-        .add_system(update_time)
-        .add_system(update_character_frequency)
-        //
+        .add_startup_system(start_background_audio.system())
+        .add_system_set(
+            SystemSet::on_update(AppState::InGame)
+                .with_system(collisions.exclusive_system().at_start())
+                .with_system(main_character_inputs)
+                .with_system(main_char_movement)
+                .with_system(agents_movement)
+                .with_system(record_mouse_events_system)
+                .with_system(see)
+                .with_system(update_agent_kdtree)
+                .with_system(forget)
+                .with_system(agent_decisions)
+                .with_system(agent_action)
+                .with_system(update_agent_properties)
+                .with_system(energy_ground_state)
+                .with_system(winning_condition)
+                .with_system(send_guardians)
+                .with_system(update_time)
+                .with_system(update_character_frequency)
+                .with_system(adjust_playback_rate)
+                .with_system(print_status),
+        )
+        .add_system_set(
+            SystemSet::on_enter(AppState::Ending).with_system(play_ending), // .with_system(fade_out_in),
+        )
+        .add_system_set(
+            SystemSet::on_update(AppState::Ending)
+                // .with_system(play_ending)
+                .with_system(fade_out_in),
+        ) //
         // .add_system(agent_movement_debug)
-        // .add_system(load_character)
-        // .add_system(load_character_auto)
         .run();
+}
+
+fn start_background_audio(
+    mut commands: Commands,
+    asset_server: Res<AssetServer>,
+    audio: Res<Audio>,
+) {
+    let intro_song_handle = asset_server.load("Rise Above_Song.ogg");
+    let instance_handle = audio.play_looped(intro_song_handle.clone());
+    // let instance_handle = audio.play_looped(asset_server.load("Rise Above Action V1.ogg"));
+    commands.insert_resource(LoopAudioInstanceHandle { instance_handle });
+    commands.insert_resource(intro_song_handle);
+}
+
+fn print_status(
+    audio: Res<Audio>,
+    loop_audio: Res<LoopAudioInstanceHandle>,
+    asset_server: Res<AssetServer>,
+) {
+    let state = audio.state(loop_audio.instance_handle.clone());
+    // println!("Loop audio {:?}", state);
+    if let bevy_kira_audio::PlaybackState::Playing { position: pos } = state {
+        // println!("{:?}", pos);
+        if pos > 212.0 {
+            audio.stop();
+            audio.play_looped(asset_server.load("Rise Above Action V1.ogg"));
+        }
+    }
+}
+
+use kdtree::distance::squared_euclidean;
+pub fn adjust_playback_rate(
+    audio: Res<Audio>,
+    time: Res<Time>,
+    game: Res<Game>,
+    kdtrees: Res<KdTrees>,
+) {
+    let main_character = game.agents.get(&1).unwrap();
+
+    if let Ok(dist_id_array) = kdtrees.agent_kdtree.nearest(
+        &[main_character.position.x, main_character.position.y],
+        // (agent.sensors.sight_range).powf(2.0),
+        2,
+        // (100.0_f32).powf(2.0),
+        &squared_euclidean,
+    ) {
+        let t = time.seconds_since_startup() as f32;
+        let start = 0.0;
+        if t > start {
+            let (dist, id) = dist_id_array[1];
+            let closest_agent = game.agents.get(&id).unwrap();
+            if closest_agent.is_guardian {
+                let distance = dist.sqrt();
+                let playback_delta = (10.0 / distance) * 3.0;
+                let playback = (1.0 + playback_delta).clamp(1.0, 3.0);
+                audio.set_playback_rate(playback);
+
+                // audio.set_playback_rate(1.0 + (t - start) * 0.0);
+            }
+        }
+    }
 }
 
 pub fn update_time(time: Res<Time>, mut query: Query<(&mut CharacterUniform,)>) {
@@ -475,18 +569,6 @@ fn setup(
         )),
         ..Default::default()
     });
-
-    // let contents = include_str!("piko.cha");
-
-    // let piko: CharacterSaveFormat = serde_json::from_str(&contents).unwrap();
-
-    // let piko_nodes = piko
-    //     .data
-    //     .iter()
-    //     .map(|node| node.pos * MASS_MULT)
-    //     .collect::<Vec<_>>();
-
-    // let character: MarkerInstanceMatData = loaded_character.clone().into();
 
     ///// Load Creatures
     let creatures_map = load_creatures();
@@ -818,11 +900,125 @@ pub fn energy_ground_state(mut game: ResMut<Game>, time: Res<Time>) {
     }
 }
 
+#[derive(Component)]
+pub struct EndText;
+
+pub fn play_ending(
+    mut commands: Commands,
+    game: Res<Game>,
+    audio: Res<Audio>,
+    asset_server: Res<AssetServer>,
+    // loop_audio: Res<Handle<AudioSource>>,
+) {
+    // audio.stop();
+    // // audio.play_looped(loop_audio);
+
+    // println!("won");
+
+    let main_character = game.agents.get(&1).unwrap();
+    let mut pos = Vec3::new(
+        main_character.position.x,
+        main_character.position.y - 50.0,
+        50.0,
+    );
+
+    let text_style = TextStyle {
+        font: asset_server.load("fonts/Roboto-Regular.ttf"),
+        font_size: 17.0,
+        color: Color::rgba(0.0, 1.0, 1.0, 0.0),
+    };
+    let text_alignment = TextAlignment {
+        vertical: VerticalAlign::Bottom,
+        horizontal: HorizontalAlign::Center,
+    };
+
+    commands
+        .spawn_bundle(Text2dBundle {
+            text: Text::with_section("Rise Above", text_style.clone(), text_alignment),
+            transform: Transform::from_translation(pos),
+            ..Default::default()
+        })
+        .insert(EndText);
+
+    pos.y = pos.y - 30.0;
+
+    commands
+        .spawn_bundle(Text2dBundle {
+            text: Text::with_section(
+                "A game made by Eliot Bolduc",
+                text_style.clone(),
+                text_alignment,
+            ),
+            transform: Transform::from_translation(pos),
+            ..Default::default()
+        })
+        .insert(EndText);
+
+    pos.y = pos.y - 30.0;
+
+    commands
+        .spawn_bundle(Text2dBundle {
+            text: Text::with_section(
+                "Song 1: Rise Above Song by Isaac Wylder  ",
+                text_style.clone(),
+                text_alignment,
+            ),
+            transform: Transform::from_translation(pos),
+            ..Default::default()
+        })
+        .insert(EndText);
+
+    pos.y = pos.y - 30.0;
+    commands
+        .spawn_bundle(Text2dBundle {
+            text: Text::with_section(
+                "Song 2: Rise Above Action by Francis Grégoire",
+                text_style.clone(),
+                text_alignment,
+            ),
+            transform: Transform::from_translation(pos),
+            ..Default::default()
+        })
+        .insert(EndText);
+}
+
+// pub struct StartMusicEvent;
+
+pub fn fade_out_in(
+    audio: Res<Audio>,
+    time: Res<Time>,
+    mut game_end_time: ResMut<GameEndTime>,
+    // start_mus_event_writer: EventWriter<StartMusicEvent>,
+    asset_server: Res<AssetServer>,
+    mut query: Query<&mut Text, With<EndText>>,
+) {
+    let fade_time = 2.0;
+    let delta = time.seconds_since_startup() as f32 - game_end_time.time;
+
+    if delta < fade_time {
+        audio.set_volume((1.0 - (delta - fade_time)) / fade_time);
+        for mut text in query.iter_mut() {
+            // println!("nothing?");
+            for section in text.sections.iter_mut() {
+                section.style.color.set_a(delta / fade_time * 0.5);
+                // println!("{:?}", section);
+            }
+        }
+    } else if game_end_time.do_start_music {
+        game_end_time.do_start_music = false;
+        audio.stop();
+        audio.play_looped(asset_server.load("Rise Above_Song.ogg"));
+    }
+}
+
 pub fn winning_condition(
     game: ResMut<Game>,
     time: Res<Time>,
     asset_server: Res<AssetServer>,
     mut commands: Commands,
+    mut app_state: ResMut<State<AppState>>,
+    audio: Res<Audio>,
+    mut game_end_time: ResMut<GameEndTime>,
 ) {
     let agent = game.agents.get(&1).unwrap();
 
@@ -848,6 +1044,12 @@ pub fn winning_condition(
                 text_alignment,
             );
         }
+
+        game_end_time.time = time.seconds_since_startup() as f32;
+        app_state.set(AppState::Ending).unwrap();
+        audio.stop();
+
+        // audio.play_looped(asset_server.load("Rise Above_Song.ogg"));
 
         commands
             .spawn_bundle(Text2dBundle {

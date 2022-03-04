@@ -28,5 +28,7 @@ strum_macros = "0.24.0"
 strum = "0.24.0"
 kdtree = "0.6.0"
 
+bevy_kira_audio = "0.8"
+
 
 

@@ -74,9 +74,8 @@ pub struct MovementParams {
     #[inspectable(min = 0.02, max = 3.0, speed = 0.001)]
     pub time_between_boosts: f32,
 
-    #[inspectable(min = 0.02, max = 3.0, speed = 0.001)]
-    pub downcurrent: f32,
-
+    // #[inspectable(min = 0.02, max = 3.0, speed = 0.001)]
+    // pub downcurrent: f32,
     #[inspectable(min = 0.1, max = 100.0, speed = 0.01)]
     pub bottom_bounce: f32,
 }
@@ -93,7 +92,7 @@ impl Default for MovementParams {
             max_turn_speed: 0.05,
             throttle: 50.0,
             time_between_boosts: 2.0,
-            downcurrent: 0.1,
+            // downcurrent: 0.1,
             bottom_bounce: 2.0,
         }
     }
@@ -111,7 +110,7 @@ impl MovementParams {
             max_turn_speed: 0.05,
             throttle: 150.0,
             time_between_boosts: 1.0,
-            downcurrent: 0.5,
+            // downcurrent: 0.5,
             bottom_bounce: 10.0,
         }
     }
@@ -127,7 +126,7 @@ impl MovementParams {
             max_turn_speed: 0.05,
             throttle: 200.0,
             time_between_boosts: 0.5,
-            downcurrent: 2.0,
+            // downcurrent: 2.0,
             bottom_bounce: 10.0,
         }
     }
@@ -143,7 +142,7 @@ impl MovementParams {
             max_turn_speed: 0.1,
             throttle: 1500.0,
             time_between_boosts: 0.25,
-            downcurrent: 1.0,
+            // downcurrent: 1.0,
             bottom_bounce: 50.0,
         }
     }
@@ -177,9 +176,10 @@ fn main() {
         .add_system(forget)
         .add_system(agent_decisions)
         .add_system(agent_action)
-        .add_system(update_agent_properties)
+        .add_system(update_agent_properties.exclusive_system().at_start())
         .add_system(energy_ground_state)
         .add_system(winning_condition)
+        .add_system(send_guardians)
         //
         // .add_system(agent_movement_debug)
         // .add_system(load_character)
@@ -187,7 +187,34 @@ fn main() {
         .run();
 }
 
-pub fn update_agent_kdtree(mut kdtrees: ResMut<KdTrees>, game: Res<Game>) {
+pub fn send_guardians(mut game: ResMut<Game>, time: Res<Time>) {
+    if time.seconds_since_startup() > 0.0 {
+        let main_char = game.agents.get(&1).unwrap();
+        let main_char_height = main_char.position.y;
+        if main_char_height > LEVEL_HEIGHT / 2.0 {
+            for (id, agent) in game.agents.iter_mut() {
+                //
+                // guardians
+                if *id >= 20 && *id < 40 {
+                    agent.goal = Goal::Bully(1); // main_char.id;
+                    agent.goal_time = time.seconds_since_startup() as f32;
+                }
+            }
+        }
+    }
+}
+
+pub fn update_agent_kdtree(mut kdtrees: ResMut<KdTrees>, mut game: ResMut<Game>) {
+    let mut rng = rand::thread_rng();
+    for (_id, mut agent) in game.agents.iter_mut() {
+        if !agent.position.y.is_finite() {
+            agent.position = Vec2::new(
+                rng.gen::<f32>() * LEVEL_WIDTH,
+                rng.gen::<f32>() * LEVEL_HEIGHT,
+            );
+        }
+    }
+
     kdtrees.gen_agent_kdtree(&game.agents);
 }
 
@@ -308,9 +335,11 @@ fn setup(
     // let character: MarkerInstanceMatData = loaded_character.clone().into();
 
     //////////////////// main character////////////////////////////////////////////////////////////////////////
-    let mut main_agent = Agent::gen_random(&GameStage::Bottom, 1); // the 1 is for the main character's id
-                                                                   // main_agent.position = Vec2::new(LEVEL_WIDTH / 2.0, 20.0);
-    main_agent.position = Vec2::new(LEVEL_WIDTH / 2.0, LEVEL_HEIGHT - 1000.0);
+    // the 1 is for the main character's id
+    let mut main_agent = Agent::gen_random(&GameStage::Bottom, 1);
+    // main_agent.position = Vec2::new(LEVEL_WIDTH / 2.0, 20.0);
+    // main_agent.position = Vec2::new(LEVEL_WIDTH / 2.0, 20.0);
+    main_agent.position = Vec2::new(LEVEL_WIDTH / 2.0, LEVEL_HEIGHT - 1000.0 - 20.0);
     main_agent.last_position = main_agent.position;
     // main_agent.mass = 0.1;
     // main_agent.update_mass_properties();
@@ -525,11 +554,41 @@ fn setup(
     commands
         .spawn_bundle(Text2dBundle {
             text: Text::with_section(
-                "Focus on your breathing and rise above the surface. Everyone is your friend and your enemy.",
+                "Focus on your breathing and rise above the surface.              The moshpit is essential.             Once a friend, twice a foe.",
                 text_style.clone(),
                 text_alignment,
             ),
-            transform: Transform::from_translation(Vec3::new(LEVEL_WIDTH / 2.0, -100.0, 10.0)),
+            transform: Transform::from_translation(Vec3::new(
+                LEVEL_WIDTH / 2.0 + 800.0,
+                -100.0,
+                10.0,
+            )),
+            ..Default::default()
+        })
+        .insert(StartText);
+
+    let text_style = TextStyle {
+        font: asset_server.load("fonts/Roboto-Regular.ttf"),
+        font_size: 44.0,
+        color: Color::BLACK,
+    };
+    let text_alignment = TextAlignment {
+        vertical: VerticalAlign::Bottom,
+        horizontal: HorizontalAlign::Center,
+    };
+
+    commands
+        .spawn_bundle(Text2dBundle {
+            text: Text::with_section(
+                "Use Space or right click to boost. Use WASD or the left click to steer",
+                text_style.clone(),
+                text_alignment,
+            ),
+            transform: Transform::from_translation(Vec3::new(
+                LEVEL_WIDTH / 2.0 - 800.0,
+                -100.0,
+                10.0,
+            )),
             ..Default::default()
         })
         .insert(StartText);
@@ -751,8 +810,11 @@ pub fn main_char_movement(
         let rest_turn_speed = move_params.rest_turn_speed;
         let max_turn_speed = move_params.max_turn_speed;
         let throttle = move_params.throttle;
-        let downcurrent = move_params.downcurrent;
+        // let downcurrent = move_params.downcurrent ;
+
         let bottom_bounce = move_params.bottom_bounce;
+
+        let downcurrent = 0.1 + agent.position.y / LEVEL_HEIGHT * 3.0;
 
         let verlet_velocity = agent.position - agent.last_position;
         agent.speed = verlet_velocity.length();
@@ -917,8 +979,13 @@ pub fn agents_movement(
         let boost_mult = move_params.boost_mult;
         let rest_turn_speed = move_params.rest_turn_speed;
         let max_turn_speed = move_params.max_turn_speed;
-        let throttle = move_params.throttle;
-        let _downcurrent = move_params.downcurrent;
+
+        let mut throttle = move_params.throttle;
+
+        if agent.is_guardian {
+            throttle *= 4.0;
+        }
+        // let _downcurrent = move_params.downcurrent;
         let bottom_bounce = move_params.bottom_bounce;
 
         let verlet_velocity = agent.position - agent.last_position;

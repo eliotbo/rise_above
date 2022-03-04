@@ -65,6 +65,8 @@ pub struct Agent {
     pub sensors: Sensors,
 
     pub entity: Option<Entity>,
+
+    pub is_guardian: bool,
 }
 
 impl Agent {
@@ -74,12 +76,14 @@ impl Agent {
         let position: Vec2;
         let mass: f32;
         let race: Race;
-        let hp: f32;
+        // let hp: f32;
         // let social_attributes: SocialAttributes;
         // let hearing_range: f32;
         // let sight_range: f32;
 
         let memory_time: f32;
+
+        let mut is_guardian = false;
 
         // can see 5 times it's radius
         // let eyes = 10.0;
@@ -90,8 +94,7 @@ impl Agent {
                     rng.gen_range(BOTTOM_LIMIT_X_MIN..BOTTOM_LIMIT_X_MAX) * LEVEL_WIDTH,
                     rng.gen_range(0.0..BOTTOM_STAGE_LIMIT) * LEVEL_HEIGHT,
                 );
-                mass = rng.gen_range(0.02..BOTTOM_STAGE_LIMIT);
-                hp = rng.gen_range(0.0..BOTTOM_STAGE_LIMIT);
+                mass = rng.gen_range(0.02..0.05);
 
                 race = Race::random_race(&bottom);
             }
@@ -100,8 +103,7 @@ impl Agent {
                     rng.gen_range(0.0..1.0) * LEVEL_WIDTH,
                     rng.gen_range(BOTTOM_STAGE_LIMIT..MID_STAGE_LIMIT) * LEVEL_HEIGHT,
                 );
-                mass = rng.gen_range(BOTTOM_STAGE_LIMIT..MID_STAGE_LIMIT);
-                hp = rng.gen_range(BOTTOM_STAGE_LIMIT..MID_STAGE_LIMIT);
+                mass = rng.gen_range(0.05..0.11);
 
                 race = Race::random_race(&mid);
                 // social_attributes = race.gen_socials();
@@ -110,19 +112,21 @@ impl Agent {
                 position = Vec2::new(
                     rng.gen_range(0.02..TOP_STAGE_LIMIT) * LEVEL_WIDTH,
                     rng.gen_range(MID_STAGE_LIMIT..TOP_STAGE_LIMIT) * LEVEL_HEIGHT,
+                    // rng.gen_range(BOTTOM_STAGE_LIMIT..MID_STAGE_LIMIT) * LEVEL_HEIGHT,
                 );
-                mass = rng.gen_range(MID_STAGE_LIMIT..TOP_STAGE_LIMIT);
-                hp = rng.gen_range(MID_STAGE_LIMIT..TOP_STAGE_LIMIT);
+                mass = rng.gen_range(0.11..0.2);
+
                 // hearing_range = MASS_MULT * mass * eyes;
 
                 race = Race::random_race(&top);
+                is_guardian = true;
                 // social_attributes = race.gen_socials();
             }
         };
 
         let radius = mass * MASS_MULT * ATOM_MULT;
 
-        let sight_range = radius * 10.0;
+        let sight_range = radius * 20.0;
         let hearing_range = sight_range;
 
         let race_attributes = race.gen_attributes();
@@ -160,6 +164,79 @@ impl Agent {
             sensors,
             memory_time,
             look_at_angle,
+            is_guardian,
+            ..Default::default()
+        }
+    }
+
+    pub fn gen_guardian(pos: Vec2, id: u32) -> Self {
+        let mut rng = thread_rng();
+
+        let position: Vec2;
+        let mass: f32;
+        let race: Race;
+        // let hp: f32;
+        // let social_attributes: SocialAttributes;
+        // let hearing_range: f32;
+        // let sight_range: f32;
+
+        let memory_time: f32;
+
+        let mut is_guardian = false;
+
+        // can see 5 times it's radius
+        // let eyes = 10.0;
+
+        position = pos;
+        mass = rng.gen_range(0.11..0.2);
+
+        // hearing_range = MASS_MULT * mass * eyes;
+
+        race = Race::random_race(&GameStage::Top);
+        is_guardian = true;
+        // social_attributes = race.gen_socials();
+
+        let radius = mass * MASS_MULT * ATOM_MULT;
+
+        let sight_range = radius * 20.0;
+        let hearing_range = sight_range;
+
+        let race_attributes = race.gen_attributes();
+        let social_attributes = race_attributes.social_attributes;
+        memory_time = race_attributes.memory_time;
+
+        let look_at_angle: f32 = rng.gen_range(0.0..6.3);
+        let target_position = position + Vec2::new(look_at_angle.cos(), look_at_angle.sin()) * 50.0;
+
+        let social = Social {
+            social_attributes,
+            ..Default::default()
+        };
+
+        let sensors = Sensors {
+            hearing_range,
+            sight_range,
+            ..Default::default()
+        };
+
+        let last_position = position;
+        // println!("ps: {:?}", position);
+        // println!("last_position {:?}", last_position);
+
+        Agent {
+            id,
+            position,
+            last_position,
+            target_position,
+            mass,
+            radius,
+
+            energy: 1.0,
+            social,
+            sensors,
+            memory_time,
+            look_at_angle,
+            is_guardian,
             ..Default::default()
         }
     }
@@ -281,7 +358,7 @@ impl Agent {
         if !self.sensors.agent_sight.is_empty() && rng.gen::<f32>() < prob_altruism {
             //
             let a = agents_in_sight.iter().next().unwrap().1;
-            self.goal = Goal::GoToAgent(AgentId { kdtree_hash: a.id });
+            self.goal = Goal::GoToAgent(a.id);
 
         // if there is food in sight, go to closest
         } else if !self.sensors.food_sight.is_empty() && rng.gen::<f32>() < 0.95 {
@@ -312,7 +389,7 @@ impl Agent {
         match self.goal.clone() {
             //
             Goal::GoToAgent(agent_id) => {
-                self.target_position = *agent_positions.get(&agent_id.kdtree_hash).unwrap();
+                self.target_position = *agent_positions.get(&agent_id).unwrap();
             }
             Goal::Food(food_sight) => {
                 self.target_position = food_sight.position;
@@ -321,7 +398,8 @@ impl Agent {
                 self.target_position = item_sight.position;
             }
             Goal::Bully(agent_id) => {
-                self.target_position = *agent_positions.get(&agent_id.kdtree_hash).unwrap();
+                // println!("bully {}", agent_id);
+                self.target_position = *agent_positions.get(&agent_id).unwrap();
             }
             Goal::Flee(from) => {
                 let fleeing_direction = (self.position - from).normalize();
@@ -361,7 +439,7 @@ impl Agent {
 
     pub fn react_to_collision(
         &mut self,
-        attacker: &AgentId,
+        attacker: &u32,
         attacker_mass: f32,
         attacker_position: Vec2,
         time: f32,
@@ -488,6 +566,7 @@ impl Default for Agent {
             goal: Goal::None,
 
             sensors: sensors,
+            is_guardian: false,
 
             entity: None,
         };
@@ -597,7 +676,7 @@ pub struct OtherAgentSight {
 pub enum Sight {
     Agent(OtherAgentSight),
     Food(Food),
-    Item(Item),
+    // Item(Item),
     None,
 }
 
@@ -631,11 +710,11 @@ pub enum Goal {
     SearchForFood,
     SearchForItem,
     FindPartner(f32), // mass
-    GoToAgent(AgentId),
+    GoToAgent(u32),
     Food(FoodSight),
     Flee(Vec2), // direction
     Item(ItemSight),
-    Bully(AgentId),
+    Bully(u32),
 }
 
 #[derive(Debug, EnumIter, Copy, Clone)]

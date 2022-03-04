@@ -179,6 +179,7 @@ fn main() {
         .add_system(agent_action)
         .add_system(update_agent_properties)
         .add_system(energy_ground_state)
+        .add_system(winning_condition)
         //
         // .add_system(agent_movement_debug)
         // .add_system(load_character)
@@ -203,6 +204,7 @@ fn setup(
     mut commands: Commands,
     mut game: ResMut<Game>,
     mut kdtrees: ResMut<KdTrees>,
+    asset_server: Res<AssetServer>,
     // time: Res<Time>,
 ) {
     // commands
@@ -307,7 +309,8 @@ fn setup(
 
     //////////////////// main character////////////////////////////////////////////////////////////////////////
     let mut main_agent = Agent::gen_random(&GameStage::Bottom, 1); // the 1 is for the main character's id
-    main_agent.position = Vec2::new(LEVEL_WIDTH / 2.0, 20.0);
+                                                                   // main_agent.position = Vec2::new(LEVEL_WIDTH / 2.0, 20.0);
+    main_agent.position = Vec2::new(LEVEL_WIDTH / 2.0, LEVEL_HEIGHT - 1000.0);
     main_agent.last_position = main_agent.position;
     // main_agent.mass = 0.1;
     // main_agent.update_mass_properties();
@@ -328,8 +331,11 @@ fn setup(
         .collect::<Vec<_>>();
     // main_agent.mass = 0.05;
 
-    let mut transform =
-        Transform::from_translation(Vec3::new(LEVEL_WIDTH / 2.0, 0.0, MAIN_CHARA_Z));
+    let mut transform = Transform::from_translation(Vec3::new(
+        main_agent.position.x,
+        main_agent.position.y,
+        MAIN_CHARA_Z,
+    ));
 
     transform.rotation =
         Quat::from_rotation_z(main_agent.look_at_angle + std::f32::consts::PI / 1.0);
@@ -505,7 +511,28 @@ fn setup(
     }
     ////////////////////////////// spawn food ////////////////////////////////////////////////
 
-    ////////////////////////////// energy meter /////////////////////////////
+    ////////////////////////////// text /////////////////////////////
+    let text_style = TextStyle {
+        font: asset_server.load("fonts/Roboto-Regular.ttf"),
+        font_size: 44.0,
+        color: Color::BLACK,
+    };
+    let text_alignment = TextAlignment {
+        vertical: VerticalAlign::Bottom,
+        horizontal: HorizontalAlign::Center,
+    };
+
+    commands
+        .spawn_bundle(Text2dBundle {
+            text: Text::with_section(
+                "Focus on your breathing and rise above the surface. Everyone is your friend and your enemy.",
+                text_style.clone(),
+                text_alignment,
+            ),
+            transform: Transform::from_translation(Vec3::new(LEVEL_WIDTH / 2.0, -100.0, 10.0)),
+            ..Default::default()
+        })
+        .insert(StartText);
 }
 
 pub fn energy_ground_state(mut game: ResMut<Game>, time: Res<Time>) {
@@ -519,9 +546,44 @@ pub fn energy_ground_state(mut game: ResMut<Game>, time: Res<Time>) {
                     agent.energy - ENERGY_DECAY_RATE * (agent.energy - ENERGY_GROUND_STATE);
             }
             if *id == 1 {
-                println!("energy: {:?}", agent.energy);
+                // println!("energy: {:?}", agent.energy);
             }
         }
+    }
+}
+
+pub fn winning_condition(
+    game: ResMut<Game>,
+    // time: Res<Time>,
+    asset_server: Res<AssetServer>,
+    mut commands: Commands,
+) {
+    let agent = game.agents.get(&1).unwrap();
+
+    if agent.position.y > LEVEL_HEIGHT - 1000.0 && !game.won {
+        let text_style = TextStyle {
+            font: asset_server.load("fonts/Roboto-Regular.ttf"),
+            font_size: 44.0,
+            color: Color::BLACK,
+        };
+        let text_alignment = TextAlignment {
+            vertical: VerticalAlign::Bottom,
+            horizontal: HorizontalAlign::Center,
+        };
+
+        println!("you won!");
+
+        commands
+            .spawn_bundle(Text2dBundle {
+                text: Text::with_section("You win! You win! You win! You win! You win! You win! You win! You win! You win! You win! You win! You win! You win! You win! You win! You win! You win! You win! You win! You win! You win! You win! You win! You win! You win! You win! You win! You win! You win! You win! You win! You win! You win! You win! You win! You win! You win! You win! You win! You win! You win! You win! You win! You win! You win! You win! You win! You win! You win! You win! You win! You win! You win! You win! You win! You win! You win! You win! You win! You win! You win! You win! You win! You win! You win! You win! You win! You win! You win! You win! You win! You win! You win! You win! You win! You win! You win! You win! You win! You win! You win! You win! You win! You win! You win! You win! You win! You win! You win! You win! You win! You win!", text_style.clone(), text_alignment),
+                transform: Transform::from_translation(Vec3::new(
+                    LEVEL_WIDTH / 2.0,
+                    LEVEL_HEIGHT + 100.0 - 1000.0,
+                    10.0,
+                )),
+                ..Default::default()
+            })
+            .insert(StartText);
     }
 }
 

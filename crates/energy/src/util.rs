@@ -60,6 +60,9 @@ pub struct NPC;
 #[derive(Component)]
 pub struct FoodComp;
 
+#[derive(Component)]
+pub struct StartText;
+
 pub struct CollisionEvent {
     pub agent_id: u32,
     pub other_agent_id: u32,
@@ -135,6 +138,7 @@ pub struct Game {
     pub foods: HashMap<u32, Food>,
 
     pub teams: HashMap<TeamId, Team>,
+    pub won: bool,
 }
 
 impl Game {
@@ -154,6 +158,7 @@ impl Game {
             foods: foods,
 
             teams: HashMap::new(),
+            won: false,
         }
     }
 
